@@ -3,6 +3,10 @@ package binarytest
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"net"
+	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -38,4 +42,72 @@ func Binary() {
 		fmt.Printf("%02X", bin)
 	}
 	fmt.Println()
+}
+
+type endianMode int
+
+const (
+	big endianMode = iota
+	little
+)
+
+func TCPServer() {
+	l, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		panic(err)
+	}
+
+	for {
+		ln, netErr := l.Accept()
+		if netErr != nil {
+			if err, ok := netErr.(net.Error); ok && err.Timeout() {
+				// TODO log
+				continue
+			}
+			logrus.Errorf("create link error:%s", err.Error())
+			continue
+		}
+		go func(conn net.Conn) {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			// read
+			go func() {
+				defer wg.Done()
+				for {
+					buf := make([]byte, 4)
+					_, err := conn.Read(buf)
+					if err != nil {
+						logrus.Errorf("read error:%s", err.Error())
+						return
+					}
+					v := binary.LittleEndian.Uint32(buf[:4])
+					println(v)
+				}
+			}()
+			// write
+			go func() {
+				ticker := time.NewTicker(2 * time.Second)
+				defer func() {
+					wg.Done()
+					ticker.Stop()
+				}()
+				for {
+					select {
+					case <-ticker.C:
+						ticker.Reset(2 * time.Second)
+						buf := make([]byte, 4)
+						var v uint32 = 100
+						binary.LittleEndian.PutUint32(buf[:4], v)
+						if _, err := conn.Write(buf); err != nil {
+							logrus.Errorf("write error:%s", err.Error())
+							return
+						}
+					}
+				}
+			}()
+			wg.Wait()
+			logrus.Debug("goroutine exit.")
+		}(ln)
+	}
+
 }
