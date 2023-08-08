@@ -55,6 +55,15 @@ func MapCopy() map[string]string {
 	return copyMap
 }
 
+// MapRange map遍历
+func MapRange(f func(key, value string)) {
+	config.mu.RLock()
+	defer config.mu.RUnlock()
+	for k, v := range config.Map {
+		f(k, v)
+	}
+}
+
 func LoadConfig() {
 	config = new(ExampleConfig)
 	config.Map = map[string]string{
@@ -77,5 +86,9 @@ func ShowResult() {
 	for k, v := range copyMap {
 		fmt.Printf("方式二：%s: %s\n", k, v)
 	}
+	println()
+	MapRange(func(key, value string) {
+		fmt.Println(key, "=", value)
+	})
 
 }
