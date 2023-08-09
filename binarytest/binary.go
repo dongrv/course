@@ -3,7 +3,7 @@ package binarytest
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -52,11 +52,11 @@ const (
 )
 
 func TCPServer() {
-	l, err := net.Listen("tcp", ":8080")
+	addr := ":8080"
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
-
 	for {
 		ln, netErr := l.Accept()
 		if netErr != nil {
@@ -64,9 +64,10 @@ func TCPServer() {
 				// TODO log
 				continue
 			}
-			logrus.Errorf("create link error:%s", err.Error())
+			fmt.Errorf("create link error:%s", err.Error())
 			continue
 		}
+		fmt.Printf("server is ruinning at %s\n", addr)
 		go func(conn net.Conn) {
 			var wg sync.WaitGroup
 			wg.Add(2)
@@ -77,11 +78,11 @@ func TCPServer() {
 					buf := make([]byte, 4)
 					_, err := conn.Read(buf)
 					if err != nil {
-						logrus.Errorf("read error:%s", err.Error())
+						fmt.Printf("read error:%s\n", err.Error())
 						return
 					}
 					v := binary.LittleEndian.Uint32(buf[:4])
-					println(v)
+					fmt.Printf("server receive from client:%d\n", v)
 				}
 			}()
 			// write
@@ -99,15 +100,67 @@ func TCPServer() {
 						var v uint32 = 100
 						binary.LittleEndian.PutUint32(buf[:4], v)
 						if _, err := conn.Write(buf); err != nil {
-							logrus.Errorf("write error:%s", err.Error())
+							fmt.Printf("write error:%s\n", err.Error())
 							return
 						}
+						fmt.Printf("server write %v\n", v)
 					}
 				}
 			}()
 			wg.Wait()
-			logrus.Debug("goroutine exit.")
+			fmt.Println("goroutine exit.")
 		}(ln)
 	}
+}
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func Client() {
+	time.Sleep(1 * time.Second)
+	addr := ":8080"
+	ln, err := net.Dial("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("dial success,host:%s\n", addr)
+	var ch = make(chan struct{}, 0)
+	go func(conn net.Conn) {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		// read
+		go func() {
+			defer wg.Done()
+			for {
+				buf := make([]byte, 4)
+				_, err := ln.Read(buf)
+				if err != nil {
+					fmt.Printf("client read error: %s\n", err.Error())
+					return
+				}
+				v := binary.LittleEndian.Uint32(buf[:])
+				fmt.Printf("client read:%d\n", v)
+			}
+		}()
+		// write
+		go func() {
+			defer wg.Done()
+			for {
+				buf := make([]byte, 4)
+				var v = rand.Uint32()
+				binary.LittleEndian.PutUint32(buf, v)
+				_, err := ln.Write(buf)
+				if err != nil {
+					fmt.Printf("client write error:%s\n", err.Error())
+					return
+				}
+				fmt.Printf("client write:%d\n", v)
+				time.Sleep(5 * time.Second)
+			}
+		}()
+		wg.Wait()
+		ch <- struct{}{}
+	}(ln)
+	<-ch
 }
