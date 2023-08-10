@@ -3,6 +3,10 @@ package binarytest
 import (
 	"encoding/binary"
 	"fmt"
+	"math/rand"
+	"net"
+	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -38,4 +42,125 @@ func Binary() {
 		fmt.Printf("%02X", bin)
 	}
 	fmt.Println()
+}
+
+type endianMode int
+
+const (
+	big endianMode = iota
+	little
+)
+
+func TCPServer() {
+	addr := ":8080"
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	for {
+		ln, netErr := l.Accept()
+		if netErr != nil {
+			if err, ok := netErr.(net.Error); ok && err.Timeout() {
+				// TODO log
+				continue
+			}
+			fmt.Errorf("create link error:%s", err.Error())
+			continue
+		}
+		fmt.Printf("server is ruinning at %s\n", addr)
+		go func(conn net.Conn) {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			// read
+			go func() {
+				defer wg.Done()
+				for {
+					buf := make([]byte, 4)
+					_, err := conn.Read(buf)
+					if err != nil {
+						fmt.Printf("read error:%s\n", err.Error())
+						return
+					}
+					v := binary.LittleEndian.Uint32(buf[:4])
+					fmt.Printf("server receive from client:%d\n", v)
+				}
+			}()
+			// write
+			go func() {
+				ticker := time.NewTicker(2 * time.Second)
+				defer func() {
+					wg.Done()
+					ticker.Stop()
+				}()
+				for {
+					select {
+					case <-ticker.C:
+						ticker.Reset(2 * time.Second)
+						buf := make([]byte, 4)
+						var v uint32 = 100
+						binary.LittleEndian.PutUint32(buf[:4], v)
+						if _, err := conn.Write(buf); err != nil {
+							fmt.Printf("write error:%s\n", err.Error())
+							return
+						}
+						fmt.Printf("server write %v\n", v)
+					}
+				}
+			}()
+			wg.Wait()
+			fmt.Println("goroutine exit.")
+		}(ln)
+	}
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func Client() {
+	time.Sleep(1 * time.Second)
+	addr := ":8080"
+	ln, err := net.Dial("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("dial success,host:%s\n", addr)
+	var ch = make(chan struct{}, 0)
+	go func(conn net.Conn) {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		// read
+		go func() {
+			defer wg.Done()
+			for {
+				buf := make([]byte, 4)
+				_, err := ln.Read(buf)
+				if err != nil {
+					fmt.Printf("client read error: %s\n", err.Error())
+					return
+				}
+				v := binary.LittleEndian.Uint32(buf[:])
+				fmt.Printf("client read:%d\n", v)
+			}
+		}()
+		// write
+		go func() {
+			defer wg.Done()
+			for {
+				buf := make([]byte, 4)
+				var v = rand.Uint32()
+				binary.LittleEndian.PutUint32(buf, v)
+				_, err := ln.Write(buf)
+				if err != nil {
+					fmt.Printf("client write error:%s\n", err.Error())
+					return
+				}
+				fmt.Printf("client write:%d\n", v)
+				time.Sleep(5 * time.Second)
+			}
+		}()
+		wg.Wait()
+		ch <- struct{}{}
+	}(ln)
+	<-ch
 }

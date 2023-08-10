@@ -3,5 +3,7 @@ package binarytest
 import "testing"
 
 func TestBinary(t *testing.T) {
-	Binary()
+	//Binary()
+	go TCPServer()
+	Client()
 }
