@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 	"unsafe"
@@ -21,6 +22,10 @@ import (
 大端字节序：高位字节在前，低位字节在后，这是人类读写数值的方法。简单来说，就是按照从低地址到高地址的顺序存放数据的高位字节到低位字节，就如同例子中的0X2211
 小端字节序：低位字节在前，高位字节在后，就是按照从低地址到高地址的顺序存放据的低位字节到高位字节。即以0x1122形式储存。
 */
+
+const (
+	StreamHeadSize = 4 // 消息头字节长度
+)
 
 func Binary() {
 	var i uint32 = 380
@@ -75,14 +80,20 @@ func TCPServer() {
 			go func() {
 				defer wg.Done()
 				for {
-					buf := make([]byte, 4)
+					buf := make([]byte, StreamHeadSize)
 					_, err := conn.Read(buf)
 					if err != nil {
 						fmt.Printf("read error:%s\n", err.Error())
 						return
 					}
-					v := binary.LittleEndian.Uint32(buf[:4])
-					fmt.Printf("server receive from client:%d\n", v)
+					msgLen := binary.LittleEndian.Uint32(buf[:]) // 实际消息长度
+					streamBuf := make([]byte, msgLen)
+					n, err := conn.Read(streamBuf)
+					if err != nil {
+						fmt.Printf("服务器读取消息错误:%s\n", err.Error())
+						return
+					}
+					fmt.Printf("服务器读取消息内容:%s\n", streamBuf[:n])
 				}
 			}()
 			// write
@@ -92,18 +103,23 @@ func TCPServer() {
 					wg.Done()
 					ticker.Stop()
 				}()
+				var tickNum int
+
 				for {
 					select {
 					case <-ticker.C:
-						ticker.Reset(2 * time.Second)
-						buf := make([]byte, 4)
-						var v uint32 = 100
-						binary.LittleEndian.PutUint32(buf[:4], v)
+						tickNum++
+						ticker.Reset(3 * time.Second)
+						msg := []byte(`你好，客户端:` + strconv.Itoa(rand.Intn(1e8)))
+						msgLen := len(msg)                                                  // 获取消息长度
+						buf := make([]byte, StreamHeadSize+msgLen)                          // 构造缓冲区，长度=头长度+消息体长度
+						binary.LittleEndian.PutUint32(buf[:StreamHeadSize], uint32(msgLen)) // 消息体长度写入头部字节
+						copy(buf[StreamHeadSize:], msg)                                     // 实际消息体copy到缓冲区
 						if _, err := conn.Write(buf); err != nil {
-							fmt.Printf("write error:%s\n", err.Error())
+							fmt.Printf("服务器写入错误:%s\n", err.Error())
 							return
 						}
-						fmt.Printf("server write %v\n", v)
+						//fmt.Printf("服务器写入心跳计数:%d\n", tickNum)
 					}
 				}
 			}()
@@ -133,29 +149,43 @@ func Client() {
 		go func() {
 			defer wg.Done()
 			for {
-				buf := make([]byte, 4)
+				buf := make([]byte, StreamHeadSize)
 				_, err := ln.Read(buf)
 				if err != nil {
-					fmt.Printf("client read error: %s\n", err.Error())
+					fmt.Printf("客户端读取错误: %s\n", err.Error())
 					return
 				}
-				v := binary.LittleEndian.Uint32(buf[:])
-				fmt.Printf("client read:%d\n", v)
+				stream := make([]byte, binary.LittleEndian.Uint32(buf[:]))
+				_, err = conn.Read(stream)
+				if err != nil {
+					fmt.Printf("客户端读取错误: %s\n", err.Error())
+					return
+				}
+				fmt.Printf("客户端读取消息内容:%s\n", stream)
+				time.Sleep(time.Second)
 			}
 		}()
 		// write
 		go func() {
 			defer wg.Done()
+			var exitNum int
 			for {
-				buf := make([]byte, 4)
-				var v = rand.Uint32()
-				binary.LittleEndian.PutUint32(buf, v)
+
+				msg := []byte(fmt.Sprintf("你好，服务端：%d", rand.Intn(1000)))
+				msgLen := len(msg)
+				buf := make([]byte, StreamHeadSize+msgLen)
+				binary.LittleEndian.PutUint32(buf[:StreamHeadSize], uint32(msgLen))
+				copy(buf[StreamHeadSize:], msg)
 				_, err := ln.Write(buf)
 				if err != nil {
-					fmt.Printf("client write error:%s\n", err.Error())
+					fmt.Printf("客户端写入错误:%s\n", err.Error())
 					return
 				}
-				fmt.Printf("client write:%d\n", v)
+				exitNum++
+				if exitNum == 10 {
+					conn.Close()
+					return
+				}
 				time.Sleep(5 * time.Second)
 			}
 		}()
