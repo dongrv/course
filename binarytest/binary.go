@@ -2,10 +2,10 @@ package binarytest
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 	"unsafe"
@@ -76,6 +76,7 @@ func TCPServer() {
 		go func(conn net.Conn) {
 			var wg sync.WaitGroup
 			wg.Add(2)
+			msgChan := make(chan HelloResp, 1)
 			// read
 			go func() {
 				defer wg.Done()
@@ -93,7 +94,26 @@ func TCPServer() {
 						fmt.Printf("服务器读取消息错误:%s\n", err.Error())
 						return
 					}
-					fmt.Printf("服务器读取消息内容:%s\n", streamBuf[:n])
+					req := &HelloReq{}
+					err = json.Unmarshal(streamBuf[:n], req)
+					if err != nil {
+						fmt.Printf("服务器读取消息报错:%s\n", err.Error())
+						return
+					}
+					fmt.Printf("服务器读取消息内容:%v\n", req)
+					resp := HelloResp{}
+					if req.FromId == 0 {
+						resp = HelloResp{
+							Err: 0,
+							Msg: "FromId is 0",
+						}
+					} else {
+						resp = HelloResp{
+							Err: 100,
+							Msg: "FromId is 1",
+						}
+					}
+					msgChan <- resp
 				}
 			}()
 			// write
@@ -107,10 +127,14 @@ func TCPServer() {
 
 				for {
 					select {
-					case <-ticker.C:
+					case resp := <-msgChan:
 						tickNum++
 						ticker.Reset(3 * time.Second)
-						msg := []byte(`你好，客户端:` + strconv.Itoa(rand.Intn(1e8)))
+						msg, err := json.Marshal(resp)
+						if err != nil {
+							fmt.Printf("服务器写入错误:%s\n", err.Error())
+							return
+						}
 						msgLen := len(msg)                                                  // 获取消息长度
 						buf := make([]byte, StreamHeadSize+msgLen)                          // 构造缓冲区，长度=头长度+消息体长度
 						binary.LittleEndian.PutUint32(buf[:StreamHeadSize], uint32(msgLen)) // 消息体长度写入头部字节
@@ -161,29 +185,36 @@ func Client() {
 					fmt.Printf("客户端读取错误: %s\n", err.Error())
 					return
 				}
-				fmt.Printf("客户端读取消息内容:%s\n", stream)
+				resp := &HelloResp{}
+				err = json.Unmarshal(stream, resp)
+				if err != nil {
+					fmt.Printf("客户端读取报错:%s", err.Error())
+					return
+				}
+				fmt.Printf("客户端读取消息内容:%v\n", resp)
 				time.Sleep(time.Second)
 			}
 		}()
 		// write
 		go func() {
 			defer wg.Done()
-			var exitNum int
 			for {
-
-				msg := []byte(fmt.Sprintf("你好，服务端：%d", rand.Intn(1000)))
+				req := &HelloReq{
+					Msg:    "我是来自客户端的推送信息",
+					FromId: rand.Intn(2),
+				}
+				msg, err := json.Marshal(req)
+				if err != nil {
+					fmt.Printf("客户端写入错误：%s\n", err.Error())
+					return
+				}
 				msgLen := len(msg)
 				buf := make([]byte, StreamHeadSize+msgLen)
 				binary.LittleEndian.PutUint32(buf[:StreamHeadSize], uint32(msgLen))
 				copy(buf[StreamHeadSize:], msg)
-				_, err := ln.Write(buf)
+				_, err = ln.Write(buf)
 				if err != nil {
 					fmt.Printf("客户端写入错误:%s\n", err.Error())
-					return
-				}
-				exitNum++
-				if exitNum == 10 {
-					conn.Close()
 					return
 				}
 				time.Sleep(5 * time.Second)
@@ -193,4 +224,14 @@ func Client() {
 		ch <- struct{}{}
 	}(ln)
 	<-ch
+}
+
+type HelloReq struct {
+	Msg    string
+	FromId int
+}
+
+type HelloResp struct {
+	Err int
+	Msg string
 }
