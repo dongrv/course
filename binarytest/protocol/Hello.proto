@@ -1,0 +1,21 @@
+syntax = "proto3";
+option go_package="./;protocol";
+
+package protocol;
+
+
+message SayReq {
+  int32 id = 1;
+  string message = 2;
+}
+
+message SayResp {
+  int32 err = 1;
+  string message = 2;
+  message Payload {
+    int32 from = 1;
+    string msg = 2;
+  }
+  Payload payload = 3;
+}
+
