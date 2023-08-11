@@ -1,6 +1,7 @@
 package binarytest
 
 import (
+	"aaagame/tests/course/binarytest/protocol"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -76,7 +77,7 @@ func TCPServer() {
 		go func(conn net.Conn) {
 			var wg sync.WaitGroup
 			wg.Add(2)
-			msgChan := make(chan HelloResp, 1)
+			msgChan := make(chan *protocol.SayResp, 1)
 			// read
 			go func() {
 				defer wg.Done()
@@ -94,26 +95,34 @@ func TCPServer() {
 						fmt.Printf("服务器读取消息错误:%s\n", err.Error())
 						return
 					}
-					req := &HelloReq{}
+					req := &protocol.SayReq{}
 					err = json.Unmarshal(streamBuf[:n], req)
 					if err != nil {
 						fmt.Printf("服务器读取消息报错:%s\n", err.Error())
 						return
 					}
 					fmt.Printf("服务器读取消息内容:%v\n", req)
-					resp := HelloResp{}
-					if req.FromId == 0 {
-						resp = HelloResp{
-							Err: 0,
-							Msg: "FromId is 0",
+					resp := protocol.SayResp{}
+					if req.Id == 0 {
+						resp = protocol.SayResp{
+							Err:     0,
+							Message: "FromId is 0",
+							Payload: &protocol.SayResp_Payload{
+								From: 0,
+								Msg:  "I'm payload message",
+							},
 						}
 					} else {
-						resp = HelloResp{
-							Err: 100,
-							Msg: "FromId is 1",
+						resp = protocol.SayResp{
+							Err:     1,
+							Message: "FromId is 0",
+							Payload: &protocol.SayResp_Payload{
+								From: 1,
+								Msg:  "I'm payload message1",
+							},
 						}
 					}
-					msgChan <- resp
+					msgChan <- &resp
 				}
 			}()
 			// write
@@ -123,13 +132,10 @@ func TCPServer() {
 					wg.Done()
 					ticker.Stop()
 				}()
-				var tickNum int
 
 				for {
 					select {
 					case resp := <-msgChan:
-						tickNum++
-						ticker.Reset(3 * time.Second)
 						msg, err := json.Marshal(resp)
 						if err != nil {
 							fmt.Printf("服务器写入错误:%s\n", err.Error())
@@ -185,7 +191,7 @@ func Client() {
 					fmt.Printf("客户端读取错误: %s\n", err.Error())
 					return
 				}
-				resp := &HelloResp{}
+				resp := &protocol.SayResp{}
 				err = json.Unmarshal(stream, resp)
 				if err != nil {
 					fmt.Printf("客户端读取报错:%s", err.Error())
@@ -199,9 +205,9 @@ func Client() {
 		go func() {
 			defer wg.Done()
 			for {
-				req := &HelloReq{
-					Msg:    "我是来自客户端的推送信息",
-					FromId: rand.Intn(2),
+				req := &protocol.SayReq{
+					Message: "我是来自客户端的推送信息",
+					Id:      int32(rand.Intn(2)),
 				}
 				msg, err := json.Marshal(req)
 				if err != nil {
@@ -224,14 +230,4 @@ func Client() {
 		ch <- struct{}{}
 	}(ln)
 	<-ch
-}
-
-type HelloReq struct {
-	Msg    string
-	FromId int
-}
-
-type HelloResp struct {
-	Err int
-	Msg string
 }
