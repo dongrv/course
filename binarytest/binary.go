@@ -58,8 +58,11 @@ const (
 )
 
 func TCPServer() {
-	addr := ":8080"
-	l, err := net.Listen("tcp", addr)
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:8080")
+	if err != nil {
+		panic(err)
+	}
+	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
