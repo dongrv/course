@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"sync"
@@ -86,7 +87,7 @@ func TCPServer() {
 				defer wg.Done()
 				for {
 					buf := make([]byte, StreamHeadSize)
-					_, err := conn.Read(buf)
+					_, err := io.ReadFull(conn, buf)
 					if err != nil {
 						fmt.Printf("read error:%s\n", err.Error())
 						return
@@ -183,7 +184,7 @@ func Client() {
 			defer wg.Done()
 			for {
 				buf := make([]byte, StreamHeadSize)
-				_, err := ln.Read(buf)
+				_, err := io.ReadFull(conn, buf)
 				if err != nil {
 					fmt.Printf("客户端读取错误: %s\n", err.Error())
 					return
