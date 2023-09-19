@@ -1,17 +1,9 @@
 package lighttcp
 
 import (
-	"fmt"
-	"io"
-	"math"
+	"context"
 	"net"
-	"os"
 	"sync"
-	"time"
-)
-
-const (
-	msgSeqLen = 2 // 消息编号长度，单位：字节
 )
 
 type Action interface {
@@ -24,47 +16,25 @@ type Action interface {
 
 // MsgProcessor 消息处理器
 type MsgProcessor struct {
-	headerLen int
-	bigEndian bool // 是否大端
-	MinLen    int  // 消息最小长度
-	MaxLen    int  // 消息最大长度
+	msgHeadSize int  // 消息长度数值存储的字节数
+	bigEndian   bool // 是否大端
+	minLen      int  // 消息最小长度
+	maxLen      int  // 消息最大长度
 }
+
+// 位置标记
+const (
+	OnSocket At = `OnSocket`
+	OnRead   At = `OnRead`
+	OnWrite  At = `OnWrite`
+)
 
 // Init 设置消息体长度范围
-func (mv *MsgProcessor) Init(bigEndian bool, head int) {
-	if !(head == 1 || head == 2 || head == 4) {
-		panic("args head must be 1,2,4")
-	}
-	mv.bigEndian, mv.headerLen, mv.MinLen = bigEndian, head, head
-	mv.MaxLen = map[int]int{1: math.MaxInt8, 2: math.MaxInt16, 4: math.MaxInt32}[head]
-}
-
-// Validate 校验长度
-func (mv *MsgProcessor) Validate(msgLen int) bool {
-	return mv.MinLen <= msgLen && msgLen <= mv.MaxLen
-}
-
-// ReadEndian 读取数值
-func (mv *MsgProcessor) ReadEndian(buf []byte) (msgLen uint) {
-	return ReadEndian(buf, mv.headerLen, mv.bigEndian)
-}
-
-// WriteEndian 写入数值
-func (mv *MsgProcessor) WriteEndian(msgLen uint, buf []byte) {
-	WriteEndian(buf, mv.headerLen, msgLen, mv.bigEndian)
-}
-
-// 标准错误
-func stdError(err error) {
-	if err == nil {
-		return
-	}
-	_, _ = fmt.Fprintf(os.Stderr, "%s\t报错信息：%s\n", time.Now().Format(time.DateTime+".000"), err.Error())
-}
-
-// 标准输出
-func stdOut(b []byte) {
-	_, _ = fmt.Fprintf(os.Stdout, "%s\t信息：%s\n", time.Now().Format(time.DateTime+".000"), b)
+func (mv *MsgProcessor) Init() {
+	mv.bigEndian = bigEndian
+	mv.msgHeadSize = msgHeaderSize
+	mv.minLen = msgHeaderSize
+	mv.maxLen = ByteMaxInt[msgHeaderSize]
 }
 
 type Guard struct {
@@ -73,81 +43,60 @@ type Guard struct {
 	ReadCh      chan []byte // 读取管道
 	WriteCh     chan []byte // 写入管道
 	ActionQueue chan Action // 动作队列
-	Collector   interface{} // TODO 数据收集器
+	//Collector   interface{} // TODO 数据收集器
 }
 
 func (g *Guard) Init() {
 	g.Processor = &MsgProcessor{}
-	g.Processor.Init(true, 4)
+	g.Processor.Init()
 	g.wg = &sync.WaitGroup{}
+	g.ReadCh = make(chan []byte, 1)
+	g.WriteCh = make(chan []byte, 1)
+	g.ActionQueue = make(chan Action, 100)
 }
 
-func (g *Guard) Connect() {
-	ln, err := net.Dial("tcp", ":2001")
+// TCPConfig 通讯配置
+type TCPConfig struct {
+	Network string
+	Addr    string
+}
+
+// OnSocket 建立连接，启动Socket读写协程
+func (g *Guard) OnSocket(ctx context.Context, c TCPConfig) {
+	ln, err := net.Dial(c.Network, c.Addr)
 	if err != nil {
-		stdError(err)
+		stdError(err, OnSocket)
+		return
 	}
+	defer ln.Close()
+
 	g.wg.Add(2)
-	go g.WriteTCP([]byte(`1234567890`), ln)
-	go g.ReadTCP(ln)
+	go g.OnWrite(ctx, ln)
+	go g.OnRead(ctx, ln)
 	g.wg.Wait()
 }
 
-func (g *Guard) ReadTCP(conn net.Conn) {
-	var err error
-
-	defer func() {
-		g.wg.Done()
-		stdError(err)
-	}()
-
+func (g *Guard) Process() {
 	for {
-		headerBuf := make([]byte, g.Processor.headerLen)
-		_, err = io.ReadFull(conn, headerBuf)
-		if err != nil {
-			break
+		select {
+		case _ = <-g.ReadCh:
+
 		}
-		msgLen := g.Processor.ReadEndian(headerBuf)
-		if msgLen == 0 {
-			err = ErrReadEndianInvalid
-			break
-		}
-		if !g.Processor.Validate(int(msgLen)) {
-			err = fmt.Errorf("读取无效的消息长度：%d", msgLen)
-			break
-		}
-		msgBuf := make([]byte, msgLen)
-		_, err = conn.Read(msgBuf)
-		if err != nil {
-			break
-		}
-		stdOut(msgBuf)
-		g.ReadCh <- msgBuf
 	}
 }
 
-func (g *Guard) WriteTCP(msg []byte, conn net.Conn) {
-	if len(msg) == 0 {
-		return
-	}
-	var err error
-	defer func() {
-		g.wg.Done()
-		stdError(err)
-	}()
+func (g *Guard) OnRead(ctx context.Context, conn net.Conn) {
+	defer g.wg.Done()
+	stdError(ReadSocket(ctx, g.ReadCh, conn, g.Processor.msgHeadSize, func(i interface{}) bool {
+		v, ok := i.(int)
+		if !ok {
+			return false
+		}
+		return g.Processor.minLen <= v && v <= g.Processor.maxLen
+	}), OnRead)
+}
 
-	for {
-		t := g.Processor.headerLen + len(msg)
-		if !g.Processor.Validate(t) {
-			err = fmt.Errorf("读取无效的消息长度：%d", t)
-			return
-		}
-		buf := make([]byte, t) // 消息总长度=头+消息体长度
-		g.Processor.WriteEndian(uint(len(msg)), buf)
-		copy(buf[g.Processor.headerLen:], msg)
-		if _, err = conn.Write(buf); err != nil {
-			break
-		}
-		stdOut(msg)
-	}
+func (g *Guard) OnWrite(ctx context.Context, conn net.Conn) {
+	defer g.wg.Done()
+	stdError(WriteSocket(ctx, g.WriteCh, conn), OnWrite)
 }

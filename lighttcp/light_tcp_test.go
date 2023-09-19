@@ -1,9 +1,16 @@
 package lighttcp
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
-func TestGuard_Connect(t *testing.T) {
+func TestGuard_StartRW(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	g := &Guard{}
 	g.Init()
-	g.Connect()
+	g.OnSocket(ctx, TCPConfig{`tcp`, `:2001`})
+
 }
