@@ -24,9 +24,10 @@ type MsgProcessor struct {
 
 // 位置标记
 const (
-	OnSocket At = `OnSocket`
-	OnRead   At = `OnRead`
-	OnWrite  At = `OnWrite`
+	OnSocket  At = `OnSocket`
+	OnRead    At = `OnRead`
+	OnWrite   At = `OnWrite`
+	OnProcess At = `OnProcess`
 )
 
 // Init 设置消息体长度范围
@@ -65,7 +66,7 @@ type TCPConfig struct {
 func (g *Guard) OnSocket(ctx context.Context, c TCPConfig) {
 	ln, err := net.Dial(c.Network, c.Addr)
 	if err != nil {
-		stdError(err, OnSocket)
+		StdError(err, OnSocket)
 		return
 	}
 	defer ln.Close()
@@ -76,18 +77,23 @@ func (g *Guard) OnSocket(ctx context.Context, c TCPConfig) {
 	g.wg.Wait()
 }
 
-func (g *Guard) Process() {
+func (g *Guard) OnProcess() {
 	for {
 		select {
-		case _ = <-g.ReadCh:
-
+		case msg := <-g.ReadCh:
+			StdOut(msg, OnProcess)
 		}
 	}
 }
 
+func (g *Guard) OnSend() {
+	//var msg proto.Message
+	g.WriteCh <- []byte(``)
+}
+
 func (g *Guard) OnRead(ctx context.Context, conn net.Conn) {
 	defer g.wg.Done()
-	stdError(ReadSocket(ctx, g.ReadCh, conn, g.Processor.msgHeadSize, func(i interface{}) bool {
+	StdError(ReadSocket(ctx, g.ReadCh, conn, g.Processor.msgHeadSize, func(i interface{}) bool {
 		v, ok := i.(int)
 		if !ok {
 			return false
@@ -98,5 +104,5 @@ func (g *Guard) OnRead(ctx context.Context, conn net.Conn) {
 
 func (g *Guard) OnWrite(ctx context.Context, conn net.Conn) {
 	defer g.wg.Done()
-	stdError(WriteSocket(ctx, g.WriteCh, conn), OnWrite)
+	StdError(WriteSocket(ctx, g.WriteCh, conn), OnWrite)
 }
