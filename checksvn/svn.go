@@ -60,8 +60,14 @@ type Row struct {
 }
 
 func ShowLogFunc(str *string) []Row {
+	var splitTag string // 切割标识
 	msg := *str
-	revisions := strings.Split(msg, "line")
+	if strings.Contains(msg, "lines") {
+		splitTag = "lines"
+	} else {
+		splitTag = "line"
+	}
+	revisions := strings.Split(msg, splitTag)
 	var (
 		rows        []Row
 		offsetHours int64
