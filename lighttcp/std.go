@@ -40,16 +40,16 @@ func (a At) String() string {
 	return string(a)
 }
 
-// 标准错误
-func stdError(err error, at At) {
+// StdError 标准错误
+func StdError(err error, at At) {
 	if !printStdLog || err == nil {
 		return
 	}
 	_, _ = fmt.Fprintf(os.Stderr, "%s\t%s\t错误：%s\n", time.Now().Format(time.DateTime+".000"), at.String(), err.Error())
 }
 
-// 标准输出
-func stdOut(b []byte, at string) {
+// StdOut 标准输出
+func StdOut(b []byte, at At) {
 	if !printStdLog {
 		return
 	}
@@ -143,7 +143,7 @@ func ReadSocket(ctx context.Context, ch chan<- []byte, conn net.Conn, bytes int,
 		if err != nil {
 			break
 		}
-		stdOut(buf, `OnRead`)
+		StdOut(buf, `ReadSocket`)
 		ch <- buf
 	}
 	return err
@@ -159,9 +159,9 @@ func WriteSocket(ctx context.Context, ch <-chan []byte, conn net.Conn) error {
 			if _, err := conn.Write(msg); err != nil {
 				return err
 			}
-			stdOut(msg, `OnWrite`)
+			StdOut(msg, `WriteSocket`)
 		case <-ctx.Done():
-			stdOut([]byte("上文环境退出"), `OnWrite`)
+			StdOut([]byte("上文环境退出"), `WriteSocket`)
 			return nil
 		}
 	}
