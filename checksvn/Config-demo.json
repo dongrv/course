@@ -1,0 +1,15 @@
+{
+  "Svn": {
+    "Username": "",
+    "Password": "",
+    "BusinessHost": "svn://xxx",
+    "BusinessDir": "C:/xxx/src/go/src/aaagame/server/branches/pre_release",
+    "CalculateHost": "svn://xxx",
+    "CalculateDir": "C:/xxx/src/go/src/aaagame/cal_center/branches/pre_release"
+  },
+  "Msg": {
+    "Url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"
+  },
+  "GoBuildScript": "",
+  "GoRunScript": ""
+}
