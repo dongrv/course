@@ -44,7 +44,7 @@ func IsWinOs() bool {
 	return runtime.GOOS == "windows"
 }
 
-func Command(args ...string) (string, error) {
+func Command(dir string, args ...string) (string, error) {
 	name := "/bin/bash"
 	c := "-c"
 	// 命令兼容系统差异
@@ -55,6 +55,9 @@ func Command(args ...string) (string, error) {
 	// 组装可执行命令结构
 	args = append([]string{c}, args...)
 	cmd := exec.Command(name, args...)
+	if dir != `` {
+		cmd.Dir = dir
+	}
 	// 创建获取输出命令的管道
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -1,25 +1,43 @@
 package checksvn
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// SvnAuth SVN授权信息
-type SvnAuth struct {
-	Host     string // svn://xxx.com/svn
-	Username string // 用户名
-	Password string // 访问密码
+// Config 配置
+type Config struct {
+	Svn           *SVNConfig
+	Msg           *ChatGroupBot // 推送消息地址
+	GoBuildScript string        // 编译脚本位置
+	GoRunScript   string        // 运行脚本位置
 }
 
-func NewSvnAuth(host string, username string, password string) *SvnAuth {
-	return &SvnAuth{
-		Host:     host,
-		Username: username,
-		Password: password,
+func NewConfig(file string) *Config {
+	bs, err := os.ReadFile(file)
+	if err != nil {
+		panic(err)
 	}
+	c := &Config{}
+	_ = json.Unmarshal(bs, c)
+	if c.Svn == nil {
+		panic("unexpected svn config")
+	}
+	return c
+}
+
+// SVNConfig SVN授权信息
+type SVNConfig struct {
+	Username      string // 用户名
+	Password      string // 访问密码
+	BusinessHost  string // 业务服svn://xxx.com/svn
+	BusinessDir   string // 业务服存储目录
+	CalculateHost string // 计算服svn://xxx.com/svn
+	CalculateDir  string // 计算服存储目录
 }
 
 // 声明和注册SVN命令
@@ -41,13 +59,46 @@ var (
 			[m] fixed bug
 			------------------------------------------------------------------------
 	*/
-	ShowLog Cmd = "svn log %s -l 1 --username %s --password %s" // 获取日志最近一行
-
+	ShowLog  Cmd = "svn log %s -l 1 --username %s --password %s"    // 获取日志最近一行
+	Checkout Cmd = "svn checkout %s %s --username %s --password %s" // checkout到最新版
 )
 
-// SvnCMDMap 命令集合
-var SvnCMDMap = map[Cmd]func(*string) []Row{
-	ShowLog: ShowLogFunc,
+type Server uint
+
+const (
+	Business  Server = iota // 业务服
+	Calculate               // 计算服
+)
+
+type Step int
+
+const (
+	Normal    Step = iota // 步骤正常
+	Continue              // 步骤继续
+	Interrupt             // 步骤中断
+)
+
+// SvnCmdMap 命令集合
+var SvnCmdMap = map[Cmd]func(*string) ([]Row, Step){
+	ShowLog:  ParseShowLog,
+	Checkout: ParseCheckout,
+}
+
+// formatCmd 格式化字符串
+func formatCmd(cmd Cmd, auth *SVNConfig, s Server) string {
+	dir := auth.BusinessDir
+	svn := auth.BusinessHost
+	if s == Calculate {
+		dir = auth.CalculateDir
+		svn = auth.CalculateHost
+	}
+	switch cmd {
+	case ShowLog:
+		return fmt.Sprintf(cmd.String(), svn, auth.Username, auth.Password)
+	case Checkout:
+		return fmt.Sprintf(cmd.String(), svn, dir, auth.Username, auth.Password)
+	}
+	return ``
 }
 
 // Row 行结构
@@ -57,9 +108,14 @@ type Row struct {
 	DateTime  string // 日期时间
 	Timestamp int64  // 秒级时间戳
 	Comment   string // 注释
+	PID       int    // 本次启动的程序进程号
 }
 
-func ShowLogFunc(str *string) []Row {
+func Empty(r Row) bool {
+	return r == Row{}
+}
+
+func ParseShowLog(str *string) ([]Row, Step) {
 	var splitTag string // 切割标识
 	msg := *str
 	if strings.Contains(msg, "lines") {
@@ -116,5 +172,13 @@ func ShowLogFunc(str *string) []Row {
 		rows = append(rows, row)
 		i += 2
 	}
-	return rows
+	row := rows[0] // 取最近行
+	if time.Now().Unix()-row.Timestamp <= CheckInterval {
+		return []Row{row}, Continue
+	}
+	return []Row{{}}, Interrupt
+}
+
+func ParseCheckout(str *string) ([]Row, Step) {
+	return []Row{{Comment: *str}}, Interrupt
 }
