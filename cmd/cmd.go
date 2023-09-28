@@ -127,29 +127,29 @@ func Command(dir string, args ...string) (string, error) {
 Output() 和 CombinedOutput() 不能够同时使用，因为command的标准输出只能有一个，同时使用的话便会定义了两个，便会报错。
 
 func (c *Cmd) Run() error
-1
+
 开始指定命令并且等待他执行结束，如果命令能够成功执行完毕，则返回nil，否则的话边会产生错误。
 
 func (c *Cmd) Start() error
-1
+
 使某个命令开始执行，但是并不等到他执行结束，这点和Run命令有区别．然后需要手动调用Wait方法等待命令执行完毕并且释放响应的资源。如果你想将 Wait方法分开执行的话可以使用Start，否则的话没必要使用。
 
 一个command只能使用Start()或者Run()中的一个启动命令，不能两个同时使用。
 
 func (c *Cmd) StderrPipe() (io.ReadCloser, error)
-1
+
 StderrPipe返回一个pipe，这个管道连接到command的标准错误，当command命令退出时，Wait将关闭这些pipe。
 
 func (c *Cmd) StdinPipe() (io.WriteCloser, error)
-1
+
 StdinPipe返回一个连接到command标准输入的管道pipe。
 
 func (c *Cmd) StdoutPipe() (io.ReadCloser, error)
-1
+
 StdoutPipe返回一个连接到command标准输出的管道pipe。
 
 func (c *Cmd) Wait() error
-1
+
 Wait等待command退出，他必须和Start一起使用，如果命令能够顺利执行完并顺利退出则返回nil，否则的话便会返回error，其中Wait会是放掉所有与cmd命令相关的资源。
 
 */
