@@ -106,7 +106,7 @@ func Command(dir string, args ...string) (string, error) {
 		Args         []string　 // 命令参数
 		Env          []string   // 进程环境，如果环境为空，则使用当前进程的环境
 		Dir          string　　　// 指定command的工作目录，如果dir为空，则comman在调用进程所在当前目录中运行
-		Stdin        io.Reader　// 标准输入，如果stdin是nil的话，进程从null device中读取（os.DevNull），stdin也可以时一个
+		Stdin        io.Reader　// 标准输入，如果stdin是nil的话，进程从null device中读取（os.DevNull），stdin也可以是一个
 								// 文件，否则的话则在运行过程中再开一个goroutine去/读取标准输入
 		Stdout       io.Writer  // 标准输出
 		Stderr       io.Writer　// 错误输出，如果这两个（Stdout和Stderr）为空的话，则command运行时将响应的文件描述符连接到
