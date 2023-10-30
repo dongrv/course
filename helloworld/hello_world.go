@@ -1,6 +1,9 @@
 package helloworld
 
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type inHeap struct {
 	i int
@@ -32,4 +35,21 @@ func Slice() {
 func AppendSlice(s []int) {
 	s[0] = 100
 	s = append(s, 2, 3, 4, 5, 6, 7, 8)
+}
+
+func Bytes2Str(bytes []byte) (p string) {
+	data := make([]byte, len(bytes))
+	for i := 0; i < len(bytes); i++ {
+		c := bytes[i]
+		data[i] = c
+	}
+	// old
+	//strHeader := (*reflect.StringHeader)(unsafe.Pointer(&p))
+	//strHeader.Data = uintptr(unsafe.Pointer(&data[0]))
+	//strHeader.Len = len(bytes)
+
+	// new
+	p = unsafe.String(&data[0], len(bytes))
+
+	return
 }
