@@ -27,3 +27,7 @@ func BenchmarkEqual2(b *testing.B) {
 func TestSlice(t *testing.T) {
 	Slice()
 }
+
+func TestBytes2Str(t *testing.T) {
+	t.Log(Bytes2Str([]byte("hello world")))
+}
