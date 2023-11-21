@@ -13,7 +13,7 @@ func Dial() {
 	}
 	println("The client is up")
 	go handleRawConn(ln, "Client")
-	sig := make(chan os.Signal)
+	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	select {
 	case <-sig:

@@ -71,13 +71,14 @@ func handleRawConn(conn net.Conn, from string) {
 func Serve() {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		Exit(err)
+		return
 	}
+	defer listener.Close()
 	println("The server is running and listening at ", addr)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			Exit(err)
+			break
 		}
 		go handleRawConn(conn, "Server")
 	}
