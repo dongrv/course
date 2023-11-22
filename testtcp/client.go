@@ -45,14 +45,14 @@ func sendMsg(conn net.Conn) {
 		if err := writeMsgConn(conn, 1, msg, ""); err != nil {
 			Exit(err)
 		}
-		fmt.Printf("Client send->%v+\n", req)
+		fmt.Printf("Client send->%#v\n", req)
 		time.Sleep(10 * time.Second)
 		req2 := &HelloReq2{SumList: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}
 		msg, _ = json.Marshal(req2)
 		if err := writeMsgConn(conn, 3, msg, ""); err != nil {
 			Exit(err)
 		}
-		fmt.Printf("Client send2->%+v\n", req)
+		fmt.Printf("Client send2->%#v\n", req)
 		time.Sleep(10 * time.Second)
 	}
 }

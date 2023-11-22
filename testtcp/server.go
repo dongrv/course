@@ -160,7 +160,7 @@ func readConn(conn net.Conn, _ string, from string) {
 			if err != nil {
 				Exit(err)
 			}
-			fmt.Printf("%s:received->%v\n", from, req)
+			fmt.Printf("%s:received->%#v\n", from, req)
 			resp := HelloResp{Payload: "Hello:" + strconv.Itoa(rand.Intn(99))}
 			respJson, err := json.Marshal(resp)
 			if err = writeMsgConn(conn, 2, respJson, from); err != nil {
@@ -172,14 +172,14 @@ func readConn(conn net.Conn, _ string, from string) {
 			if err != nil {
 				Exit(err)
 			}
-			fmt.Printf("%s:received->%v\n", from, req)
+			fmt.Printf("%s:received->%#v\n", from, req)
 		case 3: // 解析请求消息3
 			req := &HelloReq2{}
 			err := json.Unmarshal(buf[msgIdLen:], req)
 			if err != nil {
 				Exit(err)
 			}
-			fmt.Printf("%s:received->%v\n", from, req)
+			fmt.Printf("%s:received->%#v\n", from, req)
 			sum := 0
 			for _, v := range req.SumList {
 				sum += v
@@ -195,9 +195,10 @@ func readConn(conn net.Conn, _ string, from string) {
 			if err != nil {
 				Exit(err)
 			}
-			fmt.Printf("%s:received->%v\n", from, req)
+			fmt.Printf("%s:received->%#v\n", from, req)
 		}
 	}
+
 }
 
 func writeMsgConn(conn net.Conn, msgId uint, msg []byte, _ string) error {
