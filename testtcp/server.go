@@ -66,7 +66,7 @@ func rawWrite(conn net.Conn, from string) error {
 		if err != nil {
 			return err
 		}
-		println(fmt.Sprintf("%s send:%v\n", from, replay))
+		fmt.Printf("%s send:%v\n", from, replay)
 		_, err = conn.Write(buf)
 		if err != nil {
 			return err

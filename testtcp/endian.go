@@ -59,17 +59,17 @@ func WriteEndian(buf []byte, byteLen int, msgLen uint, bigEndian bool) {
 }
 
 // WrapHeader 包装消息头
-func WrapHeader(msg []byte, headLen int) []byte {
-	buf := make([]byte, len(msg)+headLen)
-	WriteEndian(buf, headLen, uint(len(msg)), bigEndian)
-	copy(buf[headLen:], msg)
+func WrapHeader(msg []byte, headByte int) []byte {
+	buf := make([]byte, len(msg)+headByte)
+	WriteEndian(buf, headByte, uint(len(msg)), bigEndian)
+	copy(buf[headByte:], msg)
 	return buf
 }
 
 // WrapMsg 包装消息和消息编号
-func WrapMsg(msg []byte, msgId uint, msgIdBytes int) []byte {
-	buf := make([]byte, len(msg)+msgIdBytes)
-	WriteEndian(buf, msgIdBytes, msgId, bigEndian)
-	copy(buf[msgIdBytes:], msg)
+func WrapMsg(msg []byte, msgId uint, headByte int) []byte {
+	buf := make([]byte, len(msg)+headByte)
+	WriteEndian(buf, headByte, msgId, bigEndian)
+	copy(buf[headByte:], msg)
 	return buf
 }
