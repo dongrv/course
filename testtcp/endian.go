@@ -67,7 +67,7 @@ func WrapHeader(msg []byte, headByte int) []byte {
 }
 
 // WrapMsg 包装消息和消息编号
-func WrapMsg(msg []byte, msgId uint, headByte int) []byte {
+func WrapMsg(msg []byte, msgId uint, headByte int, bigEndian bool) []byte {
 	buf := make([]byte, len(msg)+headByte)
 	WriteEndian(buf, headByte, msgId, bigEndian)
 	copy(buf[headByte:], msg)

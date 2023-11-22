@@ -202,7 +202,7 @@ func readConn(conn net.Conn, _ string, from string) {
 }
 
 func writeMsgConn(conn net.Conn, msgId uint, msg []byte, _ string) error {
-	newMsg := WrapHeader(WrapMsg(msg, msgId, msgIdLen), headerLen)
+	newMsg := WrapHeader(WrapMsg(msg, msgId, msgIdLen, bigEndian), headerLen)
 	if _, err := conn.Write(newMsg); err != nil {
 		return err
 	}
