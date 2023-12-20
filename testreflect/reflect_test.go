@@ -11,5 +11,5 @@ func TestReflectValueToInterfaceValue(t *testing.T) {
 }
 
 func TestFieldByName(t *testing.T) {
-	MofidyValueCallMethod()
+	ModifyValueCallMethod()
 }

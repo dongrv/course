@@ -77,10 +77,11 @@ func ReflectValueToInterfaceValue() {
 	fmt.Printf("%v:%v %d\n", user, reflect.TypeOf(user).Kind(), numi)
 
 	// 打印字段名和值
-	uv := reflect.ValueOf(u)
+	uv := reflect.ValueOf(u) // 获取uv，复用uv
+	uvt := uv.Type()
 	for i := 0; i < uv.NumField(); i++ {
 		field := uv.Field(i)
-		fmt.Printf("name:%s value:%v\n", uv.Type().Field(i).Name, field.Interface())
+		fmt.Printf("name:%s value:%v\n", uvt.Field(i).Name, field.Interface())
 	}
 
 }
@@ -95,7 +96,7 @@ func (u User) Description(hi string) string {
 	return fmt.Sprintf("%s, My name is %s and age is %d.", hi, u.Name, u.Age)
 }
 
-func MofidyValueCallMethod() {
+func ModifyValueCallMethod() {
 	user := &User{Id: 1, Name: "Tom", Age: 18}
 	ru := reflect.ValueOf(user)
 
@@ -114,8 +115,10 @@ func MofidyValueCallMethod() {
 	}
 
 	method := ru.Elem().MethodByName("Description")
-	params := []reflect.Value{reflect.ValueOf("Hi")}
-	say := method.Call(params)
-	fmt.Println("say:", say[0].Interface().(string))
+	if method.IsValid() {
+		params := []reflect.Value{reflect.ValueOf("Hi")}
+		say := method.Call(params)
+		fmt.Println("say:", say[0].Interface().(string))
+	}
 
 }
