@@ -7,3 +7,4 @@ require (
 	google.golang.org/protobuf v1.31.0
 )
 
+require github.com/dongrv/toolkit v0.0.0-20240111053957-f962ca07e035
