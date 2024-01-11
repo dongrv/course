@@ -6,7 +6,7 @@ import (
 
 func TestFilter(t *testing.T) {
 	f := &HashFilter{
-		queue:      make(map[unique]*metadata, 100),
+		store:      make(map[unique]*metadata, 100),
 		expiration: 10,
 		frequency:  5,
 		interval:   50,
