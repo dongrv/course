@@ -5,12 +5,7 @@ import (
 )
 
 func TestFilter(t *testing.T) {
-	f := &HashFilter{
-		store:      make(map[unique]*metadata, 100),
-		expiration: 10,
-		frequency:  5,
-		interval:   50,
-	}
+	f := NewHashFilter(100, 50, 20)
 	d1 := f.Do("hello world %v test %d go %v build %+v")
 	if d1.Push {
 		t.Log(d1)

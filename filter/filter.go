@@ -4,10 +4,13 @@ import (
 	"context"
 	"github.com/dongrv/toolkit"
 	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+var replaceTags = [...]string{"%s", "%d", "%v", "%+v", "%#v", "%f", "%p"} // 需要替换的占位符列表
 
 type unique string
 
@@ -17,7 +20,12 @@ func (u unique) Bytes() []byte {
 
 // Clean 清洗数据
 func (u unique) Clean() []byte {
-	return []byte(regReplace(string(u)))
+
+	str := string(u)
+	for _, s := range replaceTags {
+		str = strings.ReplaceAll(str, s, "")
+	}
+	return []byte(str)
 }
 
 // Result 检测结果
@@ -39,22 +47,31 @@ type metadata struct {
 	counter int32  // 计数器
 }
 
+type State uint8 // 状态标记
+
+const (
+	Closed State = iota
+	Running
+)
+
 // HashFilter 过滤器
 type HashFilter struct {
 	mu         sync.RWMutex
 	store      map[unique]*metadata // 存储队列
 	expiration int64                // 过期时间，举例：1800秒
-	interval   float64              // 推送时间间隔，举例：300秒
+	clean      *time.Ticker         // 定时器：清理数据
+	stop       chan struct{}        // 停止信号
 	frequency  int32                // 推送频率
-	clean      time.Ticker          // 定时器：清理数据
+	state      State                // 运行状态
 }
 
-func NewHashFilter(expire int64, interval float64, freq int32) *HashFilter {
+func NewHashFilter(expire int64, cleanInterval float64, freq int32) *HashFilter {
 	return &HashFilter{
 		store:      make(map[unique]*metadata, 100),
 		expiration: expire,
-		interval:   interval,
 		frequency:  freq,
+		stop:       make(chan struct{}, 1),
+		clean:      time.NewTicker(time.Duration(int64(cleanInterval)) * time.Second),
 	}
 }
 
@@ -69,7 +86,7 @@ func (h *HashFilter) Do(msg string) (r Result) {
 		if now-m.create >= h.expiration {
 			// 复用过期键同时重置数据
 			// 当前报错需推送
-			m.raw, m.unique, m.create = msg, hash, time.Now().Unix()
+			m.raw, m.unique, m.create = msg, hash, now
 			atomic.SwapInt32(&m.counter, 1)
 			return r.Set(true, 1)
 		}
@@ -98,13 +115,14 @@ func (h *HashFilter) Clean() {
 			delete(h.store, u)
 		}
 	}
-
 }
 
-// Tick 定时器：清理过期数据
-func (h *HashFilter) Tick(ctx context.Context) {
+// Run 定时器：清理过期数据
+func (h *HashFilter) Run(ctx context.Context) {
 	for {
 		select {
+		case <-h.stop:
+			return
 		case <-ctx.Done():
 			return
 		case <-h.clean.C:
@@ -113,8 +131,20 @@ func (h *HashFilter) Tick(ctx context.Context) {
 	}
 }
 
+func (h *HashFilter) Wait() { return }
+
+func (h *HashFilter) Running() bool {
+	return h.state == Running
+}
+
+func (h *HashFilter) Stop() {
+	h.stop <- struct{}{}
+	close(h.stop)
+	h.clean.Stop()
+}
+
 // Deprecated:正则替换占位符，效率低
-func regReplace(msg string) string {
+func regFn(msg string) string {
 	reg := regexp.MustCompile(`(%[(+|#)?\w)]{1,2})`)
 	return string(reg.ReplaceAll([]byte(msg), []byte("")))
 }
