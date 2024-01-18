@@ -163,7 +163,6 @@ func Atomic() {
 	fmt.Println("ui swap:", ui)
 
 	go func() {
-		return
 		var ui64 atomic.Uint64
 		ui64.Store(100)
 		fmt.Println("ui64:", ui64.Load())
