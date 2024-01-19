@@ -280,7 +280,7 @@ func CondBlockMutex() {
 	// 主 Goroutine 等待数据准备好
 	cond.L.Lock() // 堵塞
 	fmt.Println("here", time.Since(start))
-	for !dataReady {
+	for !dataReady { // 此时不会进入判断逻辑里，dataReady == true
 		cond.Wait()
 	}
 	// 此处的数据已准备就绪，可以进行后续处理
