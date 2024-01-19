@@ -29,3 +29,7 @@ func TestOnce(t *testing.T) {
 func TestMap(t *testing.T) {
 	Map()
 }
+
+func TestSyncCond(t *testing.T) {
+	SyncCond()
+}

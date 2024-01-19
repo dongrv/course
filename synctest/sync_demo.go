@@ -214,3 +214,45 @@ func Map() {
 		fmt.Println("key1 loaded and deleted", v2)
 	}
 }
+
+var ready bool
+
+func SyncCond() {
+	fn := func() bool {
+		return ready
+	}
+	cond := sync.NewCond(&sync.Mutex{})
+
+	go func() {
+		time.Sleep(time.Second)
+		cond.L.Lock()
+		ready = true
+		cond.L.Unlock()
+		cond.Signal()
+		fmt.Println("signal 1")
+		time.Sleep(time.Second)
+		cond.Signal()
+		fmt.Println("signal 2")
+	}()
+
+	go func() {
+		cond.L.Lock()
+		if !fn() {
+			cond.Wait()
+		}
+		fmt.Println("done1")
+		cond.L.Unlock()
+	}()
+
+	go func() {
+		cond.L.Lock()
+		if !fn() {
+			cond.Wait()
+		}
+		fmt.Println("done2")
+		cond.L.Unlock()
+	}()
+
+	time.Sleep(10 * time.Second)
+
+}
