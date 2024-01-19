@@ -256,3 +256,34 @@ func SyncCond() {
 	time.Sleep(10 * time.Second)
 
 }
+func CondBlockMutex() {
+	var mutex sync.Mutex
+	cond := sync.NewCond(&mutex)
+	start := time.Now()
+	// 模拟资源
+	dataReady := false
+
+	go func() {
+		cond.L.Lock() // 优先拿到锁
+		defer cond.L.Unlock()
+
+		// 模拟一段时间后数据准备完成
+		time.Sleep(10 * time.Second)
+		dataReady = true
+
+		// 数据准备完成后发出信号
+		cond.Signal()
+		fmt.Println("return", time.Since(start))
+	}()
+
+	time.Sleep(time.Second)
+	// 主 Goroutine 等待数据准备好
+	cond.L.Lock() // 堵塞
+	fmt.Println("here", time.Since(start))
+	for !dataReady {
+		cond.Wait()
+	}
+	// 此处的数据已准备就绪，可以进行后续处理
+	fmt.Println("Data is ready now.")
+	cond.L.Unlock()
+}

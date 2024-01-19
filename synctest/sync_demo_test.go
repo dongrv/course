@@ -33,3 +33,7 @@ func TestMap(t *testing.T) {
 func TestSyncCond(t *testing.T) {
 	SyncCond()
 }
+
+func TestWrongCondExample(t *testing.T) {
+	CondBlockMutex()
+}
