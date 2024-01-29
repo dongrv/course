@@ -9,3 +9,7 @@ func TestTime(t *testing.T) {
 func TestTimeAfter(t *testing.T) {
 	TimeAfter()
 }
+
+func TestSelect(t *testing.T) {
+	Select()
+}

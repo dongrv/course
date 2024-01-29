@@ -56,3 +56,19 @@ func TimeAfter() {
 	}
 
 }
+
+func Select() {
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+	syncSignal := make(chan struct{}, 1)
+	go func() {
+		time.Sleep(3 * time.Second)
+		syncSignal <- struct{}{}
+	}()
+	select {
+	case <-syncSignal: // 堵塞读取信号
+		fmt.Println(1)
+	case <-timer.C: // 防止堵塞
+		fmt.Println(2)
+	}
+}
