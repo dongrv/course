@@ -31,3 +31,7 @@ func TestSlice(t *testing.T) {
 func TestBytes2Str(t *testing.T) {
 	t.Log(Bytes2Str([]byte("hello world")))
 }
+
+func TestInterfaceDelivery(t *testing.T) {
+	InterfaceDelivery()
+}

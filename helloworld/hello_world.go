@@ -2,7 +2,6 @@ package helloworld
 
 import (
 	"fmt"
-	"unsafe"
 )
 
 type inHeap struct {
@@ -49,7 +48,33 @@ func Bytes2Str(bytes []byte) (p string) {
 	//strHeader.Len = len(bytes)
 
 	// new
-	p = unsafe.String(&data[0], len(bytes))
+	//p = unsafe.String(&data[0], len(bytes))
 
 	return
+}
+
+type C struct {
+	W *W
+}
+
+type W struct {
+}
+
+func (w *W) Write(p []byte) (n int, err error) {
+	println("writing")
+	return 0, nil
+}
+
+func TestDeliveryArgs(c *C) {
+	println("w = nil")
+	oc := c.W
+	oc = nil
+	_ = oc
+}
+func InterfaceDelivery() {
+	w := &W{}
+	c := &C{W: w}
+	fmt.Printf("%v\n", c.W)
+	TestDeliveryArgs(c)
+	fmt.Printf("%v\n", c.W)
 }
