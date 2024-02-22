@@ -76,21 +76,20 @@ const (
 )
 
 type Timewheel struct {
-	mu           sync.RWMutex
-	state        atomic.Int32          // 状态
-	Offset       int64                 // 偏移量
-	buckets      map[Segment][]Wheeler // 轮子集合
-	nameSeg      map[string][]Segment  // 名称映射时间段
-	BaseTimeline time.Duration         // 时间基线
-	Ticker       *time.Ticker          // 定时器
+	mu       sync.RWMutex
+	state    atomic.Int32          // 状态
+	buckets  map[Segment][]Wheeler // 轮子集合
+	nameSeg  map[string][]Segment  // 名称映射时间段
+	baseline time.Duration         // 时间基线
+	ticker   *time.Ticker          // 定时器
 }
 
 func NewTimewheel() *Timewheel {
 	tw := &Timewheel{
-		buckets:      make(map[Segment][]Wheeler, 1<<10),
-		nameSeg:      make(map[string][]Segment, 1<<10),
-		BaseTimeline: UnixMilli() / Unit * Unit,
-		Ticker:       time.NewTicker(Unit),
+		buckets:  make(map[Segment][]Wheeler, 1<<10),
+		nameSeg:  make(map[string][]Segment, 1<<10),
+		baseline: UnixMilli() / Unit * Unit,
+		ticker:   time.NewTicker(Unit),
 	}
 	tw.state.Store(Normal)
 	return tw
@@ -98,7 +97,7 @@ func NewTimewheel() *Timewheel {
 
 // Add 添加转轮任务
 func (tw *Timewheel) Add(w Wheeler) (Segment, error) {
-	seg := RelativeSeg(UnixMilli()+w.Time(), tw.BaseTimeline)
+	seg := offset(UnixMilli()+w.Time(), tw.baseline)
 	tw.mu.Lock()
 	defer tw.mu.Unlock()
 	if _, ok := tw.buckets[seg]; !ok {
@@ -180,8 +179,8 @@ func (tw *Timewheel) Run() {
 			continue
 		}
 		select {
-		case <-tw.Ticker.C:
-			ws := tw.Wheelers(RelativeSeg(UnixMilli(), tw.BaseTimeline))
+		case <-tw.ticker.C:
+			ws := tw.Wheelers(offset(UnixMilli(), tw.baseline))
 			for _, w := range ws {
 				w.Before()
 				w.Trigger()
@@ -209,7 +208,7 @@ func (tw *Timewheel) Wheelers(seg Segment) []Wheeler {
 
 func (tw *Timewheel) Stop() {
 	tw.Pause()
-	tw.Ticker.Stop()
+	tw.ticker.Stop()
 	tw.buckets, tw.nameSeg = nil, nil
 }
 
@@ -218,8 +217,8 @@ func UnixMilli() time.Duration {
 	return time.Duration(time.Now().UnixMilli()) * time.Millisecond
 }
 
-// RelativeSeg 时间片相对基线时间位置
-func RelativeSeg(target, base time.Duration) Segment {
+// offset 时间片相对基线时间位置
+func offset(target, base time.Duration) Segment {
 	duration := target - base
 	seg := Segment(duration / Unit)
 	if duration%Unit > 0 {
