@@ -35,7 +35,6 @@ func CodecDial() {
 	client := rpc.NewClientWithCodec(jsonrpc.NewClientCodec(ln))
 	input := Input{Operator: Plus, Number1: 100, Number2: 100}
 	var output float64
-	call := client.Go(CalculateServiceName+".Calculate", input, &output, make(chan *rpc.Call, 1))
-	<-call.Done
+	<-client.Go(CalculateServiceName+".Calculate", input, &output, make(chan *rpc.Call, 1)).Done
 	fmt.Printf("%s = %f\n", input.Expression(), output)
 }
