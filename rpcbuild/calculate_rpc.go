@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// 升级版，增加接口约束
+
 const CalculateServiceName = "path/to/HelloService" // 服务器名
 
 // CalculateServerInterface 接口约束标准
@@ -104,6 +106,7 @@ func (c *CalculateClient) FormatMethod(method string) string {
 	return CalculateServiceName + "." + method
 }
 func (c *CalculateClient) Calculate(input Input, output *float64) error {
+	// 异步调用 c.Go(c.FormatMethod("Calculate"), input, output,<-ch)
 	return c.Call(c.FormatMethod("Calculate"), input, output)
 }
 

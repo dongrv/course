@@ -6,6 +6,8 @@ import (
 	"net/rpc"
 )
 
+// 基础版
+
 type HelloService struct{}
 
 func (s *HelloService) Say(req string, resp *string) error {
