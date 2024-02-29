@@ -17,13 +17,12 @@ func Trace() {
 	defer file.Close()
 
 	trace.Start(file)
+	defer trace.Stop()
 
 	ch := make(chan string)
 	go func() {
 		ch <- "trace"
 	}()
 	<-ch
-
-	trace.Stop()
 
 }
