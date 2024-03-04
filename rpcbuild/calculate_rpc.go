@@ -12,7 +12,7 @@ import (
 
 // 升级版，增加接口约束
 
-const CalculateServiceName = "path/to/HelloService" // 服务器名
+const CalculateServiceName = "path/to/CalculateService" // 服务器名
 
 // CalculateServerInterface 接口约束标准
 type CalculateServerInterface = interface {
