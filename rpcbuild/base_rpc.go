@@ -24,6 +24,7 @@ func BaseRun() {
 	if err != nil {
 		exit("rpc listen", err)
 	}
+	defer listener.Close()
 	conn, err := listener.Accept()
 	if err != nil {
 		exit("rpc accept", err)
@@ -36,6 +37,7 @@ func BaseDial() {
 	if err != nil {
 		exit("rpc dial", err)
 	}
+	defer client.Close()
 	var reply string
 	err = client.Call("HelloService.Say", "Hello", &reply)
 	if err != nil {

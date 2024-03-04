@@ -73,7 +73,7 @@ func CalculateRun() {
 	if err != nil {
 		exit("Error listening", err)
 	}
-
+	defer listener.Close()
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -116,6 +116,7 @@ func CalculateDial() {
 	if err != nil {
 		exit("client connect", err)
 	}
+	defer client.Close()
 	inputs := []Input{
 		{Operator: Plus, Number1: 1, Number2: 2},
 		{Operator: Sub, Number1: 10000, Number2: 1234},

@@ -15,6 +15,7 @@ func CodecRun() {
 	if err != nil {
 		exit("codec listen", err)
 	}
+	defer listener.Close()
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -32,6 +33,7 @@ func CodecDial() {
 	if err != nil {
 		exit("codec dial", err)
 	}
+	defer ln.Close()
 	client := rpc.NewClientWithCodec(jsonrpc.NewClientCodec(ln))
 	input := Input{Operator: Plus, Number1: 100, Number2: 100}
 	var output float64
