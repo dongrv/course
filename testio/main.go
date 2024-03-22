@@ -77,9 +77,13 @@ func seekOffset() {
 func ioPipe() {
 	r, w := io.Pipe()
 
+	defer func() {
+		r.Close()
+		w.Close()
+	}()
+
 	// w 写入 pipe
 	go func() {
-		defer w.Close()
 		w.Write([]byte("hello world"))
 	}()
 
