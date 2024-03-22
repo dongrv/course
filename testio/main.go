@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -42,6 +43,26 @@ func readFile() {
 			return
 		}
 		fmt.Println(string(buf[:n]))
+	}
+}
+
+func scannerText() {
+	f, err := os.Open("./Hello.txt")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			f, err = os.Create("./Hello.txt")
+			if err != nil {
+				panic(err)
+			}
+			_, _ = f.WriteString("Hello world!")
+		}
+		return
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		text := scanner.Text()
+		fmt.Printf("text: %s\n", text)
 	}
 }
 
@@ -182,6 +203,9 @@ func main() {
 
 	// Test reader writer
 	readerWriter()
+
+	// Test scanner
+	scannerText()
 
 }
 
