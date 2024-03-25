@@ -2,16 +2,14 @@ package main
 
 import (
 	"aaagame/tests/course/binarytest"
-	"unsafe"
+	"aaagame/tests/course/build_tags"
 )
 
-func IsNil(i interface{}) bool {
-	value := *(*uintptr)(unsafe.Pointer(&i))
-	typ := *(*unsafe.Pointer)(unsafe.Pointer(uintptr(unsafe.Pointer(&i)) + unsafe.Sizeof(value)))
-	return typ == nil
+func main() {
+	build_tags.Print()
 }
 
-func main() {
+func callTcp() {
 	go binarytest.TCPServer()
 	binarytest.Client()
 }

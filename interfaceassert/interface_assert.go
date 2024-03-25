@@ -1,6 +1,9 @@
 package interfaceassert
 
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
 // 测试接口断言
 
@@ -30,4 +33,10 @@ func InterfaceExample() {
 	var i Interface
 	i = &Demo{Name: "example"}
 	Transport(i)
+}
+
+func IsNil(i interface{}) bool {
+	value := *(*uintptr)(unsafe.Pointer(&i))
+	typ := *(*unsafe.Pointer)(unsafe.Pointer(uintptr(unsafe.Pointer(&i)) + unsafe.Sizeof(value)))
+	return typ == nil
 }
