@@ -22,3 +22,11 @@ package build_tags
 // · +build tag1 tag2  // OR 语法，在执行build构建命令时存在tag1或tag2，则将包含此文件
 // · +build tag1, tag2 // AND 语法，在执行build构建命令时必须同时存在tag1和tag2，此文件才会被加入编译
 // · +build !tag1	   // ! 语法，编译命令中不包含tag1才会编译当前文件
+
+
+//go:build 编译指令是1.17引入的新条件编译指令格式，它旨在替换 // +build 
+// 为什么要采用新格式？
+// go:build linux && amd64 || darwin
+// +build linux,amd64 darwin
+// · 新的格式更加清楚的表示逻关系，开发更友好
+// · 与 go:embed 和 go:generate 风格上保持统一

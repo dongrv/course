@@ -8,4 +8,5 @@ func Print() {
 	for _, conf := range strings {
 		fmt.Printf("conf:%s\n", conf)
 	}
+	Say()
 }
