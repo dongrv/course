@@ -1,7 +1,7 @@
 //go:build prod
 // +build prod
 
-package build_tags
+package buildtags
 
 func init() {
 	strings = append(strings, "mysql prod")

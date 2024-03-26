@@ -1,12 +1,12 @@
-//go:build test1
-// +build test1
+//go:build dev
+// +build dev
 
-package build_tags
+package buildtags
 
 import "fmt"
 
 func init() {
-	strings = append(strings, "mysql test")
+	strings = append(strings, "mysql dev")
 }
 
 type Hello struct {
@@ -19,6 +19,6 @@ func (h *Hello) String() string {
 }
 
 func Say() {
-	hi := Hello{ID: 1, Message: "Hello, I am test1 tag"}
+	hi := Hello{ID: 1, Message: "Hello, I am dev tag"}
 	fmt.Printf("Say:%s\n", hi.String())
 }

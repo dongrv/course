@@ -24,7 +24,7 @@ package build_tags
 // · +build !tag1	   // ! 语法，编译命令中不包含tag1才会编译当前文件
 
 
-//go:build 编译指令是1.17引入的新条件编译指令格式，它旨在替换 // +build 
+// go:build 编译指令是1.17引入的新条件编译指令格式，它旨在替换 // +build 
 // 为什么要采用新格式？
 // go:build linux && amd64 || darwin
 // +build linux,amd64 darwin

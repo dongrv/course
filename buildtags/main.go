@@ -1,4 +1,4 @@
-package build_tags
+package buildtags
 
 import "fmt"
 
