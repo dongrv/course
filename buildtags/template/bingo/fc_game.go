@@ -145,7 +145,7 @@ func (game *Game) Do(input Inputer) Outer {
 	bonus := copies.Awards[index]
 	game.PickNum--
 	game.Bonus += bonus
-	game.PickedPos[pos] = struct{}{}
+	game.setPos(pos)
 
 	return result.Default(nil) // 没返回说明中奖了
 }
