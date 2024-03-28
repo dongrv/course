@@ -25,7 +25,7 @@ package build_tags
 
 
 > go:build 编译指令是1.17引入的新条件编译指令格式，它旨在替换 * +build 
-* 为什么要采用新格式？
+>> 为什么要采用新格式？
 * go:build linux && amd64 || darwin
 * +build linux,amd64 darwin
 * 新的格式更加清楚的表示逻关系，开发更友好
