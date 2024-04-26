@@ -111,7 +111,7 @@ func mockBoard1x1() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0)},
 	}
 	return board
@@ -131,7 +131,7 @@ func mockBoard2x2() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0), NewBlock(1, 0).Cannot()},
 		{NewBlock(0, 1), NewBlock(1, 1)},
 	}
@@ -152,7 +152,7 @@ func mockBoard2x3() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0), NewBlock(1, 0), NewBlock(2, 0).Cannot()},
 		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1)},
 	}
@@ -175,7 +175,7 @@ func mockBoard4x4() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0).Cannot(), NewBlock(1, 0).Cannot(), NewBlock(2, 0).Cannot(), NewBlock(3, 0)},
 		{NewBlock(0, 1).Cannot(), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1)},
 		{NewBlock(0, 2), NewBlock(1, 2), NewBlock(2, 2), NewBlock(3, 2)},
@@ -200,7 +200,7 @@ func mockBoard5x5() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0), NewBlock(1, 0), NewBlock(2, 0), NewBlock(3, 0), NewBlock(4, 0)},
 		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1).Cannot(), NewBlock(4, 1)},
 		{NewBlock(0, 2).Cannot(), NewBlock(1, 2).Cannot(), NewBlock(2, 2), NewBlock(3, 2).Cannot(), NewBlock(4, 2)},
@@ -229,7 +229,7 @@ func mockBoard6x8() *Board {
 			}},
 	}
 	board.Fishpond.Tidy()
-	board.scope = [][]Block{
+	board.Scope = [][]Block{
 		{NewBlock(0, 0).Cannot(), NewBlock(1, 0).Cannot(), NewBlock(2, 0).Cannot(), NewBlock(3, 0), NewBlock(4, 0), NewBlock(5, 0), NewBlock(6, 0), NewBlock(7, 0)},
 		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1), NewBlock(4, 1), NewBlock(5, 1), NewBlock(6, 1), NewBlock(7, 1)},
 		{NewBlock(0, 2).Cannot(), NewBlock(1, 2), NewBlock(2, 2), NewBlock(3, 2), NewBlock(4, 2), NewBlock(5, 2), NewBlock(6, 2), NewBlock(7, 2)},
@@ -299,4 +299,10 @@ func MockRandomClick(rows, cols int, fishes []Fish, maxRandomNum int) error {
 		return errors.New("recursive failed")
 	}
 	return nil
+}
+
+func TestReverse(t *testing.T) {
+	list := []Block{NewBlock(0, 5), NewBlock(1, 5)}
+	list = Reverse(list)
+	t.Logf("list: %v", list)
 }

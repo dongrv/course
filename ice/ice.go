@@ -71,11 +71,13 @@ type Coordinate struct {
 
 // Block 冰块
 type Block struct {
-	CanUse    bool       // 当前块是否可用
-	Coord     Coordinate // 当前坐标
-	Metas     [6]Meta    // 方位和举例
-	Direction Direction  // 方向索引，默认 -1
-	Fish      FishType
+	CanUse      bool       // 当前块是否可用
+	Coord       Coordinate // 当前坐标
+	Metas       [6]Meta    // 方位和举例
+	Direction   Direction  // 方向索引，默认 -1
+	Fish        FishType   // 鱼的类型
+	FishToIndex int        // 对应的索引
+	Clicked     bool       // 是否点击过当前冰块
 }
 
 func NewBlock(x, y int) Block {
@@ -90,12 +92,12 @@ func (b Block) Cannot() Block {
 
 // TakeOver 当前快被占领
 func (b *Block) TakeOver(fish Fish, direction Direction) {
-	b.CanUse, b.Fish, b.Direction = false, fish.Typ, direction
+	b.CanUse, b.Fish, b.Direction, b.FishToIndex = false, fish.Typ, direction, fish.Index
 }
 
 // Cancel 取消之前的设置
 func (b *Block) Cancel() {
-	b.CanUse, b.Fish, b.Direction = true, 0, -1
+	b.CanUse, b.Fish, b.Direction, b.FishToIndex = true, 0, -1, 0
 }
 
 //+----------------------------------------------------------------+
@@ -105,7 +107,7 @@ func (b *Block) Cancel() {
 type Board struct {
 	Rows     int       // 行数:y轴
 	Cols     int       // 列数:x轴
-	scope    [][]Block // 分布：二维数组
+	Scope    [][]Block // 分布：二维数组
 	Fishpond *Fishpond // 有多少鱼需要放置
 }
 
@@ -117,7 +119,7 @@ func (board *Board) Init() *Board {
 	if board.Rows == 0 || board.Cols == 0 {
 		return &Board{} // 参数错误
 	}
-	board.scope = make([][]Block, 0, board.Rows)
+	board.Scope = make([][]Block, 0, board.Rows)
 	for i := 0; i < board.Rows; i++ {
 		row := make([]Block, 0, board.Cols)
 		for j := 0; j < board.Cols; j++ {
@@ -127,17 +129,17 @@ func (board *Board) Init() *Board {
 				Direction: -1,
 			})
 		}
-		board.scope = append(board.scope, row)
+		board.Scope = append(board.Scope, row)
 	}
 	return board
 }
 
 // Validate 校验参数
 func (board *Board) Validate() bool {
-	if len(board.scope) == 0 {
+	if len(board.Scope) == 0 {
 		return false
 	}
-	return len(board.scope) == board.Rows && len(board.scope[0]) == board.Cols
+	return len(board.Scope) == board.Rows && len(board.Scope[0]) == board.Cols
 }
 
 // CanPut 当前坐标是否可放置
@@ -145,13 +147,13 @@ func (board *Board) CanPut(x, y int) bool {
 	if board.Rows <= y || board.Cols <= x {
 		return false
 	}
-	return board.scope[y][x].CanUse
+	return board.Scope[y][x].CanUse
 }
 
 func (board *Board) Cancel(block Block) error {
 	coord := block.Coord
 	meta := block.Metas[block.Direction]
-	board.scope[coord.Y][coord.X] = NewBlock(block.Coord.X, block.Coord.Y) // 先放置当前坐标
+	board.Scope[coord.Y][coord.X] = NewBlock(block.Coord.X, block.Coord.Y) // 先放置当前坐标
 	if meta.From == meta.To {
 		return nil // 只需要放置当前坐标
 	}
@@ -165,7 +167,7 @@ func (board *Board) Cancel(block Block) error {
 		}
 		for offset := start; offset < start+length; offset++ {
 			block.Coord.X, block.Coord.Y = offset, meta.From.Y
-			board.scope[meta.From.Y][offset] = NewBlock(block.Coord.X, block.Coord.Y)
+			board.Scope[meta.From.Y][offset] = NewBlock(block.Coord.X, block.Coord.Y)
 		}
 	} else {
 		// 垂直摆放
@@ -176,25 +178,26 @@ func (board *Board) Cancel(block Block) error {
 		}
 		for offset := start; offset < start+length; offset++ {
 			block.Coord.X, block.Coord.Y = meta.From.X, offset
-			board.scope[offset][meta.From.X] = NewBlock(block.Coord.X, block.Coord.Y)
+			board.Scope[offset][meta.From.X] = NewBlock(block.Coord.X, block.Coord.Y)
 		}
 	}
 	return nil
 }
 
 // TakeOver 占领棋盘
-func (board *Board) TakeOver(block Block) error {
+func (board *Board) TakeOver(block Block) ([]Block, error) {
 	if !board.CanPut(block.Coord.X, block.Coord.Y) {
-		return ErrBlockTaken
+		return nil, ErrBlockTaken
 	}
 	if block.Direction < 0 {
-		return ErrInvalidDirection
+		return nil, ErrInvalidDirection
 	}
+	taken := make([]Block, 0, 3)
 	coord := block.Coord
 	meta := block.Metas[block.Direction]
-	board.scope[coord.Y][coord.X] = block // 先放置当前坐标
+	board.Scope[coord.Y][coord.X] = block // 先放置当前坐标
 	if meta.From == meta.To {
-		return nil // 只需要放置当前坐标
+		return []Block{block}, nil // 只需要放置当前坐标
 	}
 	length := block.Fish.Value()
 	if meta.Towards.orthogonal() {
@@ -202,25 +205,65 @@ func (board *Board) TakeOver(block Block) error {
 		start := min(meta.From.X, meta.To.X)
 		end := max(meta.From.X, meta.To.X)
 		if (end - start + 1) < length {
-			return ErrInvalidParameter
+			return nil, ErrInvalidParameter
 		}
-		for offset := start; offset < start+length; offset++ {
+		var cursor int // 游标，用于定位开始索引
+
+		if rand.Intn(2)%2 == 0 { // 增加随机性
+			if block.Coord.X+length <= end {
+				cursor = block.Coord.X
+			} else if block.Coord.X-length+1 >= start {
+				cursor = block.Coord.X - length + 1
+			} else {
+				cursor = start
+			}
+		} else {
+			if block.Coord.X-length+1 >= start {
+				cursor = block.Coord.X - length + 1
+			} else if block.Coord.X+length <= end {
+				cursor = block.Coord.X
+			} else {
+				cursor = start
+			}
+		}
+
+		for offset := cursor; offset < cursor+length; offset++ {
 			block.Coord.X, block.Coord.Y = offset, meta.From.Y
-			board.scope[meta.From.Y][offset] = block
+			board.Scope[meta.From.Y][offset] = block
+			taken = append(taken, block)
 		}
 	} else {
 		// 垂直摆放
 		start := min(meta.From.Y, meta.To.Y)
 		end := max(meta.From.Y, meta.To.Y)
 		if (end - start + 1) < length {
-			return ErrInvalidParameter
+			return nil, ErrInvalidParameter
 		}
-		for offset := start; offset < start+length; offset++ {
+		var cursor int           // 游标，用于定位开始索引
+		if rand.Intn(2)%2 == 0 { // 增加随机性
+			if block.Coord.Y+length <= end {
+				cursor = block.Coord.Y
+			} else if block.Coord.Y-length+1 >= start {
+				cursor = block.Coord.Y - length + 1
+			} else {
+				cursor = start
+			}
+		} else {
+			if block.Coord.Y-length+1 >= start {
+				cursor = block.Coord.Y - length + 1
+			} else if block.Coord.Y+length <= end {
+				cursor = block.Coord.Y
+			} else {
+				cursor = start
+			}
+		}
+		for offset := cursor; offset < cursor+length; offset++ {
 			block.Coord.X, block.Coord.Y = meta.From.X, offset
-			board.scope[offset][meta.From.X] = block
+			board.Scope[offset][meta.From.X] = block
+			taken = append(taken, block)
 		}
 	}
-	return nil
+	return taken, nil
 }
 
 // Get 根据坐标获取元素对应指针
@@ -228,18 +271,18 @@ func (board *Board) Get(x, y int) (*Block, error) {
 	if x >= board.Cols || y >= board.Rows {
 		return nil, ErrIndexOutOfBounds
 	}
-	return &board.scope[y][x], nil
+	return &board.Scope[y][x], nil
 }
 
 // CalcDirection 计算各个方向
 func (board *Board) CalcDirection(b *Block) error {
-	if len(board.scope) <= b.Coord.Y {
+	if len(board.Scope) <= b.Coord.Y {
 		return ErrIndexOutOfBounds
 	}
-	if len(board.scope[b.Coord.Y]) <= b.Coord.X {
+	if len(board.Scope[b.Coord.Y]) <= b.Coord.X {
 		return ErrIndexOutOfBounds
 	}
-	if !board.scope[b.Coord.Y][b.Coord.X].Fish.None() {
+	if !board.Scope[b.Coord.Y][b.Coord.X].Fish.None() {
 		return ErrBlockTaken // 当前位置已经被占了
 	}
 	for _, direction := range Directions {
@@ -337,7 +380,7 @@ func (board *Board) CalcDirection(b *Block) error {
 }
 
 func (board *Board) stepOK(x, y int, length *int) bool {
-	if !board.scope[y][x].Fish.None() {
+	if !board.Scope[y][x].Fish.None() {
 		return false
 	} else {
 		*length++
@@ -347,11 +390,11 @@ func (board *Board) stepOK(x, y int, length *int) bool {
 
 // GetUsableBlocks 获取当前可用的块
 func (board *Board) GetUsableBlocks() ([]Block, error) {
-	if board.Rows == 0 || board.Cols == 0 || len(board.scope) == 0 {
+	if board.Rows == 0 || board.Cols == 0 || len(board.Scope) == 0 {
 		return nil, ErrInvalidParameter
 	}
 	result := make([]Block, 0, board.Rows*board.Cols/2)
-	for _, blocks := range board.scope {
+	for _, blocks := range board.Scope {
 		for _, block := range blocks {
 			if block.Fish.None() {
 				if err := board.CalcDirection(&block); err != nil { // 计算各方向容量
@@ -366,11 +409,11 @@ func (board *Board) GetUsableBlocks() ([]Block, error) {
 
 // Print 打印棋盘
 func (board *Board) Print() {
-	if len(board.scope) == 0 {
+	if len(board.Scope) == 0 {
 		return
 	}
 	fmt.Printf("%s\t\n", strings.Repeat("=", (board.Rows)*5-1))
-	for _, blocks := range board.scope {
+	for _, blocks := range board.Scope {
 		for _, block := range blocks {
 			fmt.Printf("%d\t", block.Fish.Value())
 		}
@@ -380,9 +423,9 @@ func (board *Board) Print() {
 }
 
 // ScopeJSON 打印json字符串
-func (board *Board) ScopeJSON() {
-	bs, _ := json.Marshal(board.scope)
-	fmt.Printf("%s\n", string(bs))
+func (board *Board) ScopeJSON() string {
+	bs, _ := json.Marshal(board.Scope)
+	return string(bs)
 }
 
 // JSON 打印json字符串
@@ -392,31 +435,11 @@ func (board *Board) JSON(target interface{}) {
 		fmt.Printf("%s\n", string(bs))
 		return
 	}
-	if len(board.scope) == 0 {
+	if len(board.Scope) == 0 {
 		return
 	}
 	bs, _ := json.Marshal(board)
 	fmt.Printf("%s\n", string(bs))
-}
-
-func (board *Board) Click(x, y int, mustFish bool) (Block, error) {
-	if !board.scope[y][x].Fish.None() {
-		return board.scope[y][x], ErrIceBlockBroken
-	}
-	if !mustFish { // 强制出鱼
-		// TODO 根据概率，如果当前位置出非鱼类型，要保证剩余可用格子可以正常放完剩余鱼
-	}
-
-	block, err := board.Get(x, y)
-	if err != nil {
-		return Block{}, err
-	}
-
-	board.CalcDirection(block) // 计算当前位置各个方向的可用容量
-	if !Recursive(board, board.Fishpond.NeedToPlace()) {
-
-	}
-	return Block{}, nil
 }
 
 func Recursive(board *Board, fishes []Fish) bool {
@@ -433,7 +456,7 @@ func Recursive(board *Board, fishes []Fish) bool {
 	}
 	fish := fishes[0]
 	fishes = fishes[1:]
-	if !canPlace(blocks, fish) {
+	if !CanPlace(blocks, fish) {
 		return false
 	}
 	for _, block := range blocks {
@@ -442,7 +465,7 @@ func Recursive(board *Board, fishes []Fish) bool {
 			if fish.Typ.Value() <= block.Metas[direction].Length {
 				// 占位
 				block.TakeOver(fish, direction)
-				if err := board.TakeOver(block); err != nil {
+				if _, err := board.TakeOver(block); err != nil {
 					board.Print()
 					fmt.Printf("take over err:%s\n", err.Error())
 					return false
@@ -465,7 +488,7 @@ func Recursive(board *Board, fishes []Fish) bool {
 			if fish.Typ.Value() <= block.Metas[direction].Length {
 				// 占位
 				block.TakeOver(fish, direction)
-				if err := board.TakeOver(block); err != nil {
+				if _, err := board.TakeOver(block); err != nil {
 					board.Print()
 					fmt.Printf("take over err:%s\n", err.Error())
 					return false
@@ -487,8 +510,8 @@ func Recursive(board *Board, fishes []Fish) bool {
 	return false
 }
 
-// canPlace 至少存在一种情况可以放置当前鱼
-func canPlace(blocks []Block, fish Fish) bool {
+// CanPlace 至少存在一种情况可以放置当前鱼
+func CanPlace(blocks []Block, fish Fish) bool {
 	for _, block := range blocks {
 		for _, direction := range Directions {
 			if fish.Typ.Value() >= block.Metas[direction].Length {
@@ -497,6 +520,19 @@ func canPlace(blocks []Block, fish Fish) bool {
 		}
 	}
 	return false
+}
+
+// UsageDirections 可用的方位
+func UsageDirections(blocks []Block, fish Fish) []Direction {
+	directions := make([]Direction, 0, 2)
+	for _, block := range blocks {
+		for _, direction := range Directions {
+			if fish.Typ.Value() >= block.Metas[direction].Length {
+				directions = append(directions, direction)
+			}
+		}
+	}
+	return directions
 }
 
 //+----------------------------------------------------------------+
@@ -524,8 +560,15 @@ const (
 	Crabs                     // 螃蟹，长度2
 	Shark                     // 鲨鱼，长度3
 	BlueWhale                 // 蓝鲸，长度4
-	Blank                     // 空格子，长度1
-	Jackpot                   // Jackpot，长度1
+
+	Blank FishType = 20 // 空格子，长度1
+)
+
+const (
+	JackpotGrand FishType = 21 + iota // Grand Jackpot，长度1
+	JackpotMajor
+	JackpotMinor
+	JackpotMini
 )
 
 // Fish 鱼
@@ -615,6 +658,18 @@ func (f *Fishpond) Copy() Fishpond {
 	return Fishpond{
 		Fishes: fishes,
 	}
+}
+
+// Reverse 反转数组
+func Reverse(blocks []Block) []Block {
+	result := make([]Block, len(blocks))
+	if len(blocks) == 0 {
+		return result
+	}
+	for i, block := range blocks {
+		result[len(blocks)-i-1] = block
+	}
+	return result
 }
 
 func min(a, b int) int {
