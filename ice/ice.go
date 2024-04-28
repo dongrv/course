@@ -80,11 +80,17 @@ type Block struct {
 	Clicked     bool       // 是否点击过当前冰块
 }
 
-func NewBlock(x, y int) Block {
-	return Block{CanUse: true, Coord: Coordinate{X: x, Y: y}, Direction: -1}
+func NewBlock(x, y int) *Block {
+	return &Block{CanUse: true, Coord: Coordinate{X: x, Y: y}, Direction: -1}
 }
 
-func (b Block) Cannot() Block {
+func (b *Block) Can() *Block {
+	b.CanUse = true
+	b.Fish = None
+	return b
+}
+
+func (b *Block) Cannot() *Block {
 	b.CanUse = false
 	b.Fish = Blank
 	return b
@@ -153,7 +159,7 @@ func (board *Board) CanPut(x, y int) bool {
 func (board *Board) Cancel(block Block) error {
 	coord := block.Coord
 	meta := block.Metas[block.Direction]
-	board.Scope[coord.Y][coord.X] = NewBlock(block.Coord.X, block.Coord.Y) // 先放置当前坐标
+	board.Scope[coord.Y][coord.X] = *NewBlock(block.Coord.X, block.Coord.Y) // 先放置当前坐标
 	if meta.From == meta.To {
 		return nil // 只需要放置当前坐标
 	}
@@ -167,7 +173,7 @@ func (board *Board) Cancel(block Block) error {
 		}
 		for offset := start; offset < start+length; offset++ {
 			block.Coord.X, block.Coord.Y = offset, meta.From.Y
-			board.Scope[meta.From.Y][offset] = NewBlock(block.Coord.X, block.Coord.Y)
+			board.Scope[meta.From.Y][offset] = *NewBlock(block.Coord.X, block.Coord.Y)
 		}
 	} else {
 		// 垂直摆放
@@ -178,7 +184,7 @@ func (board *Board) Cancel(block Block) error {
 		}
 		for offset := start; offset < start+length; offset++ {
 			block.Coord.X, block.Coord.Y = meta.From.X, offset
-			board.Scope[offset][meta.From.X] = NewBlock(block.Coord.X, block.Coord.Y)
+			board.Scope[offset][meta.From.X] = *NewBlock(block.Coord.X, block.Coord.Y)
 		}
 	}
 	return nil
@@ -192,6 +198,7 @@ func (board *Board) TakeOver(block Block) ([]Block, error) {
 	if block.Direction < 0 {
 		return nil, ErrInvalidDirection
 	}
+	block.Clicked = false // 默认未点击过
 	taken := make([]Block, 0, 3)
 	coord := block.Coord
 	meta := block.Metas[block.Direction]

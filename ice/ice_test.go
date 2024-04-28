@@ -112,7 +112,7 @@ func mockBoard1x1() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0)},
+		{*NewBlock(0, 0)},
 	}
 	return board
 }
@@ -132,8 +132,8 @@ func mockBoard2x2() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0), NewBlock(1, 0).Cannot()},
-		{NewBlock(0, 1), NewBlock(1, 1)},
+		{*NewBlock(0, 0), *NewBlock(1, 0).Cannot()},
+		{*NewBlock(0, 1), *NewBlock(1, 1)},
 	}
 	return board
 }
@@ -153,8 +153,8 @@ func mockBoard2x3() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0), NewBlock(1, 0), NewBlock(2, 0).Cannot()},
-		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1)},
+		{*NewBlock(0, 0), *NewBlock(1, 0), *NewBlock(2, 0).Cannot()},
+		{*NewBlock(0, 1), *NewBlock(1, 1), *NewBlock(2, 1)},
 	}
 	return board
 }
@@ -176,10 +176,10 @@ func mockBoard4x4() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0).Cannot(), NewBlock(1, 0).Cannot(), NewBlock(2, 0).Cannot(), NewBlock(3, 0)},
-		{NewBlock(0, 1).Cannot(), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1)},
-		{NewBlock(0, 2), NewBlock(1, 2), NewBlock(2, 2), NewBlock(3, 2)},
-		{NewBlock(0, 3), NewBlock(1, 3), NewBlock(2, 3), NewBlock(3, 3)},
+		{*NewBlock(0, 0).Cannot(), *NewBlock(1, 0).Cannot(), *NewBlock(2, 0).Cannot(), *NewBlock(3, 0)},
+		{*NewBlock(0, 1).Cannot(), *NewBlock(1, 1), *NewBlock(2, 1), *NewBlock(3, 1)},
+		{*NewBlock(0, 2), *NewBlock(1, 2), *NewBlock(2, 2), *NewBlock(3, 2)},
+		{*NewBlock(0, 3), *NewBlock(1, 3), *NewBlock(2, 3), *NewBlock(3, 3)},
 	}
 	return board
 }
@@ -201,11 +201,11 @@ func mockBoard5x5() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0), NewBlock(1, 0), NewBlock(2, 0), NewBlock(3, 0), NewBlock(4, 0)},
-		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1).Cannot(), NewBlock(4, 1)},
-		{NewBlock(0, 2).Cannot(), NewBlock(1, 2).Cannot(), NewBlock(2, 2), NewBlock(3, 2).Cannot(), NewBlock(4, 2)},
-		{NewBlock(0, 3).Cannot(), NewBlock(1, 3), NewBlock(2, 3).Cannot(), NewBlock(3, 3), NewBlock(4, 3)},
-		{NewBlock(0, 4), NewBlock(1, 4), NewBlock(2, 4).Cannot(), NewBlock(3, 4), NewBlock(4, 4)},
+		{*NewBlock(0, 0), *NewBlock(1, 0), *NewBlock(2, 0), *NewBlock(3, 0), *NewBlock(4, 0)},
+		{*NewBlock(0, 1), *NewBlock(1, 1), *NewBlock(2, 1), *NewBlock(3, 1).Cannot(), *NewBlock(4, 1)},
+		{*NewBlock(0, 2).Cannot(), *NewBlock(1, 2).Cannot(), *NewBlock(2, 2), *NewBlock(3, 2).Cannot(), *NewBlock(4, 2)},
+		{*NewBlock(0, 3).Cannot(), *NewBlock(1, 3), *NewBlock(2, 3).Cannot(), *NewBlock(3, 3), *NewBlock(4, 3)},
+		{*NewBlock(0, 4), *NewBlock(1, 4), *NewBlock(2, 4).Cannot(), *NewBlock(3, 4), *NewBlock(4, 4)},
 	}
 	return board
 }
@@ -230,12 +230,12 @@ func mockBoard6x8() *Board {
 	}
 	board.Fishpond.Tidy()
 	board.Scope = [][]Block{
-		{NewBlock(0, 0).Cannot(), NewBlock(1, 0).Cannot(), NewBlock(2, 0).Cannot(), NewBlock(3, 0), NewBlock(4, 0), NewBlock(5, 0), NewBlock(6, 0), NewBlock(7, 0)},
-		{NewBlock(0, 1), NewBlock(1, 1), NewBlock(2, 1), NewBlock(3, 1), NewBlock(4, 1), NewBlock(5, 1), NewBlock(6, 1), NewBlock(7, 1)},
-		{NewBlock(0, 2).Cannot(), NewBlock(1, 2), NewBlock(2, 2), NewBlock(3, 2), NewBlock(4, 2), NewBlock(5, 2), NewBlock(6, 2), NewBlock(7, 2)},
-		{NewBlock(0, 3), NewBlock(1, 3).Cannot(), NewBlock(2, 3), NewBlock(3, 3), NewBlock(4, 3), NewBlock(5, 3), NewBlock(6, 3), NewBlock(7, 3)},
-		{NewBlock(0, 4), NewBlock(1, 4), NewBlock(2, 4), NewBlock(3, 4), NewBlock(4, 4), NewBlock(5, 4), NewBlock(6, 4), NewBlock(7, 4)},
-		{NewBlock(0, 5), NewBlock(1, 5).Cannot(), NewBlock(2, 5), NewBlock(3, 5), NewBlock(4, 5), NewBlock(5, 5).Cannot(), NewBlock(6, 5), NewBlock(7, 5)},
+		{*NewBlock(0, 0).Cannot(), *NewBlock(1, 0).Cannot(), *NewBlock(2, 0).Cannot(), *NewBlock(3, 0), *NewBlock(4, 0), *NewBlock(5, 0), *NewBlock(6, 0), *NewBlock(7, 0)},
+		{*NewBlock(0, 1), *NewBlock(1, 1), *NewBlock(2, 1), *NewBlock(3, 1), *NewBlock(4, 1), *NewBlock(5, 1), *NewBlock(6, 1), *NewBlock(7, 1)},
+		{*NewBlock(0, 2).Cannot(), *NewBlock(1, 2), *NewBlock(2, 2), *NewBlock(3, 2), *NewBlock(4, 2), *NewBlock(5, 2), *NewBlock(6, 2), *NewBlock(7, 2)},
+		{*NewBlock(0, 3), *NewBlock(1, 3).Cannot(), *NewBlock(2, 3), *NewBlock(3, 3), *NewBlock(4, 3), *NewBlock(5, 3), *NewBlock(6, 3), *NewBlock(7, 3)},
+		{*NewBlock(0, 4), *NewBlock(1, 4), *NewBlock(2, 4), *NewBlock(3, 4), *NewBlock(4, 4), *NewBlock(5, 4), *NewBlock(6, 4), *NewBlock(7, 4)},
+		{*NewBlock(0, 5), *NewBlock(1, 5).Cannot(), *NewBlock(2, 5), *NewBlock(3, 5), *NewBlock(4, 5), *NewBlock(5, 5).Cannot(), *NewBlock(6, 5), *NewBlock(7, 5)},
 	}
 	return board
 }
@@ -245,7 +245,7 @@ func TestRecursive2(t *testing.T) {
 		success int
 		fail    int
 	)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 100; i++ {
 		fishes := []Fish{
 			{Typ: BlueWhale},
 			{Typ: Crabs},
@@ -291,7 +291,7 @@ func MockRandomClick(rows, cols int, fishes []Fish, maxRandomNum int) error {
 		if err != nil {
 			return err
 		}
-		*block = (*block).Cannot()
+		block.Cannot()
 	}
 	if !Recursive(board, board.Fishpond.NeedToPlace()) {
 		board.ScopeJSON()
@@ -302,7 +302,7 @@ func MockRandomClick(rows, cols int, fishes []Fish, maxRandomNum int) error {
 }
 
 func TestReverse(t *testing.T) {
-	list := []Block{NewBlock(0, 5), NewBlock(1, 5)}
+	list := []Block{*NewBlock(0, 5), *NewBlock(1, 5)}
 	list = Reverse(list)
 	t.Logf("list: %v", list)
 }

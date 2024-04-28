@@ -1,0 +1,714 @@
+package ice
+
+
+import (
+	"casino/protocol/act7059"
+	"casino/service/activity/base"
+	"casino/service/activity/base/static"
+	"casino/service/activity/crushedice/algorithm"
+	"casino/service/prop/exchange"
+	"casino/utils"
+	"errors"
+	"github.com/aaagame/common/log"
+	"math/rand"
+	"sort"
+	"sync"
+)
+
+var replaceType = map[algorithm.FishType]act7059.Type{
+	algorithm.Blowfish:  act7059.Type_Fish1Tem,
+	algorithm.Crabs:     act7059.Type_Fish2Tem,
+	algorithm.Shark:     act7059.Type_Fish3Tem,
+	algorithm.BlueWhale: act7059.Type_Fish4Tem,
+}
+
+type FishManager struct {
+	clickMu        sync.Mutex       // 点击锁，防并发导致数据异常
+	CurrentLevel   int32            // 当前关卡
+	CurrentRounds  int32            // 当前轮次
+	RoundsStatue   int32            // 轮次状态 0未解锁，1已解锁
+	Count          int64            // 当前拥有的道具数量
+	TotalCount     int64            // 已使用的道具总数量
+	ClickNoFishNum int32            // 当前点击未出鱼累计次数
+	Fishes         []*DisplayFish   // 展示在界面左下角的鱼
+	Clicked        []Click          // 点击的过的位置
+	Board          *algorithm.Board // 冰盘格子 4x4;5x5
+
+	mu sync.RWMutex
+	JP *JPInfo //jackpot
+}
+
+func NewFishManager() *FishManager {
+	return &FishManager{Board: &algorithm.Board{}}
+}
+
+// Click 点击
+type Click struct {
+	Coord algorithm.Coordinate
+	Typ   algorithm.FishType
+}
+
+func (f *FishManager) Init(delivery *base.Delivery, unlockBet uint64) error {
+	f.CurrentLevel, f.CurrentRounds, f.Count, f.ClickNoFishNum = FirstLevel, 1, 1, 0
+	if err := f.FreshGame(true); err != nil {
+		return err
+	}
+	f.genJP(delivery, unlockBet)
+	f.loadJackpot(delivery, unlockBet)
+	return nil
+}
+
+// FreshGame 刷新游戏数据
+func (f *FishManager) FreshGame(isInit bool) error {
+	if !isInit {
+		if f.CurrentLevel >= MaxLevel {
+			f.CurrentLevel = FirstLevel // 已通关，重新开始
+			f.RoundsStatue = 1
+		} else {
+			f.CurrentLevel++ // 进入新的一关
+		}
+	}
+	levelCfg := cfg.Level(f.CurrentLevel)
+	if levelCfg == nil {
+		return errors.New("first level levelCfg is nil")
+	}
+	if len(levelCfg.Fish) == 0 {
+		return errors.New("levelCfg fishCfg is empty")
+	}
+	// 生成需要放置的鱼列表
+	f.Fishes = make([]*DisplayFish, 0, 2)
+	for typ, fishCfg := range levelCfg.Fish {
+		for i := 0; i < int(fishCfg.Count); i++ {
+			fish := &DisplayFish{
+				Type:     algorithm.FishType(typ),
+				BelongTo: make([]algorithm.Block, 0, typ),
+				Award:    exchange.Copy(fishCfg.Award),
+			}
+			f.Fishes = append(f.Fishes, fish)
+		}
+	}
+	// 按鱼的长度降序排列
+	sort.Slice(f.Fishes, func(i, j int) bool {
+		return f.Fishes[i].Type >= f.Fishes[j].Type
+	})
+	// 绑定重排后的索引
+	for i := range f.Fishes {
+		f.Fishes[i].Index = i
+	}
+	// 初始化冰面表盘
+	if err := f.LoadBoard(levelCfg.Config.Row, levelCfg.Config.Col); err != nil {
+		return err
+	}
+	return nil
+}
+
+// LoadBoard 加载冰盘
+func (f *FishManager) LoadBoard(rows, cols int) error {
+	f.Board = algorithm.NewBoard(rows, cols).Init()
+	if !f.Board.Validate() {
+		return errors.New("验证冰盘格式失败")
+	}
+	f.Board.Fishpond = algorithm.NewFishpond(f.NeedToPlace())
+	return nil
+}
+
+func (f *FishManager) Click(x, y int32, mustFish bool) (*algorithm.Block, bool) {
+	var ok bool
+	if !f.CanClick(x, y) {
+		log.LWarnf("当前位置不可点击:(%d, %d) 盘面信息:%s", x, y, f.Board.ScopeJSON())
+		return nil, ok
+	}
+
+	f.Count--
+	f.TotalCount++
+	f.clickMu.Lock()
+	defer func() {
+		f.clickMu.Unlock()
+		if ok {
+			f.AddIncrCount() //增加jackpot次数
+		} else {
+			// 失败了要回退数据
+			f.Count++
+			f.TotalCount--
+		}
+	}()
+
+	// 冰面下有鱼
+	block, _ := f.Board.Get(int(x), int(y))
+	if block.Fish.IsFish() {
+		displayFish := f.Fishes[block.FishToIndex] // 对应展示的鱼
+		// 更新点击状态
+		block.Clicked = true
+		for i, fish := range displayFish.BelongTo {
+			if fish.Coord == block.Coord {
+				fish.Clicked = true
+				f.Fishes[block.FishToIndex].BelongTo[i] = fish
+			}
+		}
+		if f.Fishes[block.FishToIndex].Done() {
+			f.Fishes[block.FishToIndex].State = 2 // 奖励可领取
+		}
+		ok = true
+		return block, ok
+	}
+
+	if mustFish {
+		goto end
+	}
+
+	// 所有的鱼都解锁了
+	if f.IsAllFishesUnlocked() {
+		f.handleJackpot(block)
+		f.Clicked = append(f.Clicked, Click{Coord: block.Coord, Typ: block.Fish})
+		ok = true
+		return block, ok
+	}
+
+	// 当前点击是否为空
+	if f.BlockToEmpty() {
+		f.ClickNoFishNum++
+		if f.ForceShowFish() {
+			goto end
+		}
+		// 如果当前坐标出了非鱼类型，是否剩余格子可以摆放所有未解锁的鱼
+		block.Cannot()
+		if !f.CanPutFish() {
+			block.Can() // 撤销 Cannot 设置
+			goto end
+		}
+		// 当前位置出现非鱼类型安全
+		f.handleJackpot(block)
+		f.Clicked = append(f.Clicked, Click{Coord: block.Coord, Typ: block.Fish})
+		ok = true
+		return block, ok
+	}
+
+end:
+	// 出鱼逻辑
+	fishes := f.UnlockedFishes()
+	if len(fishes) == 0 {
+		log.Errorf(static.Act7059, "玩家数据错误，此时应该有未解锁的鱼：%s", utils.MarshalJson(f.Fishes))
+		return block, ok
+	}
+
+	// 构造迭代器
+	type Iterator struct {
+		Fishes []int
+	}
+	root := &Iterator{Fishes: rand.Perm(len(fishes))} // 鱼的类型
+	var iterator = func(iter *Iterator) int {
+		num := 0
+		if len(iter.Fishes) == 0 {
+			return -1
+		} else if len(iter.Fishes) == 1 {
+			num = iter.Fishes[0]
+		} else {
+			num = iter.Fishes[0]
+			iter.Fishes = iter.Fishes[1:]
+		}
+		return num
+	}
+
+	for i := iterator(root); i >= 0; {
+		fish := fishes[i] // 需要摆放的鱼
+		fish.State = 1    // 解锁
+
+		if err := f.Board.CalcDirection(block); err != nil {
+			log.Errorf(static.Act7059, "计算当前坐标位置信息错误：%s 表盘：%s", err.Error(), f.Board.ScopeJSON())
+			return nil, ok
+		}
+
+		blockIn := []algorithm.Block{*block}
+		expected := algorithm.Fish{
+			Index: fish.Index,
+			Typ:   fish.Type,
+		}
+		if !algorithm.CanPlace(blockIn, expected) {
+			continue
+		}
+		// 计算可用方向
+		usages := make([]algorithm.Direction, 0, 2)
+		for _, nb := range blockIn {
+			for _, direction := range algorithm.Directions {
+				if expected.Typ.Value() <= nb.Metas[direction].Length {
+					usages = append(usages, direction)
+				}
+			}
+		}
+		//usages := algorithm.UsageDirections(blockIn, expected)
+		from := &Iterator{Fishes: rand.Perm(len(usages))} // 方向
+		for ii := iterator(from); ii >= 0; {
+			bb := algorithm.Block{
+				CanUse:      false,
+				Coord:       block.Coord,
+				Metas:       block.Metas,
+				Direction:   usages[ii],
+				Fish:        fish.Type,
+				FishToIndex: fish.Index,
+				Clicked:     true,
+			}
+			blocks, err := f.Board.TakeOver(bb)
+			if err != nil {
+				continue
+			}
+			if !f.CanPutFish() {
+				_ = f.Board.Cancel(bb) // 撤销当前
+				continue
+			}
+
+			// 成功放置一条鱼
+
+			for k, b := range blocks {
+				// 更新盘面格子状态
+				f.Board.Scope[b.Coord.Y][b.Coord.X].CanUse = false
+				f.Board.Scope[b.Coord.Y][b.Coord.X].Fish = fish.Type
+				f.Board.Scope[b.Coord.Y][b.Coord.X].FishToIndex = fish.Index
+				if b.Coord == block.Coord {
+					(&f.Board.Scope[b.Coord.Y][b.Coord.X]).Clicked = true
+					blocks[k] = f.Board.Scope[b.Coord.Y][b.Coord.X]
+				}
+			}
+
+			// 更新状态
+			f.ClickNoFishNum = 0
+			f.Fishes[fish.Index].State = 1 // 解锁当前鱼
+			if fish.Type == algorithm.Blowfish {
+				f.Fishes[fish.Index].State = 2 // 解锁当前鱼，长度为1，直接集齐
+			}
+			f.Clicked = append(f.Clicked, Click{Coord: block.Coord, Typ: block.Fish})
+
+			// 随机鱼头位置：反转
+			if rand.Intn(100)%2 == 0 {
+				//blocks = algorithm.Reverse(blocks) // 暂不开启
+			}
+			f.Fishes[fish.Index].BelongTo = blocks
+
+			// finish
+			ok = true
+			return block, ok
+		}
+	}
+
+	return nil, ok
+}
+
+// handleJackpot 处理点击出现Jackpot信息
+func (f *FishManager) handleJackpot(block *algorithm.Block) bool {
+	var typ algorithm.FishType
+	jackpotCfg := GetJackpotConfig()
+	if rand.Float64() > jackpotCfg.JPRate {
+		typ = algorithm.FishType(f.PopSplinter())
+	} else {
+		typ = algorithm.Blank
+	}
+	block.Fish = typ
+	block.Clicked = true
+	block.CanUse = false
+	return true
+}
+
+// ForceShowFish 是否强制出鱼
+func (f *FishManager) ForceShowFish() bool {
+	levelCfg := cfg.Level(f.CurrentLevel)
+	if levelCfg == nil {
+		log.Errorf(static.Act7059, "[ForceShowFish]后台配置有误，当前关卡：%d，配置：", utils.MarshalJson(cfg.Game.Level))
+		return false
+	}
+	return f.ClickNoFishNum >= levelCfg.FirstTimes
+}
+
+// BlockToEmpty 点击位置格子是否出空
+func (f *FishManager) BlockToEmpty() bool {
+	levelCfg := cfg.Level(f.CurrentLevel)
+	if levelCfg == nil {
+		log.Errorf(static.Act7059, "[BlockToEmpty]后台配置有误，当前关卡：%d，配置：", utils.MarshalJson(cfg.Game.Level))
+		return false
+	}
+	return rand.Float64() < levelCfg.EmptyRate
+}
+
+// CanPutFish 以当前冰盘状态是否可以防线剩余的鱼
+func (f *FishManager) CanPutFish() bool {
+	copied := &algorithm.Board{
+		Rows:     f.Board.Rows,
+		Cols:     f.Board.Cols,
+		Scope:    nil,
+		Fishpond: nil,
+	}
+	// 获取副本，避免影响源数据
+	copied.Scope = make([][]algorithm.Block, f.Board.Rows)
+	for i := range copied.Scope {
+		copied.Scope[i] = make([]algorithm.Block, f.Board.Cols)
+	}
+	for i, blocks := range f.Board.Scope {
+		for j, block := range blocks {
+			copied.Scope[i][j] = block
+		}
+	}
+	copied.Fishpond = &algorithm.Fishpond{Fishes: make([]algorithm.Fish, len(f.Board.Fishpond.Fishes))}
+	copy(copied.Fishpond.Fishes, f.Board.Fishpond.Fishes)
+	return algorithm.Recursive(copied, f.NeedToPlace())
+}
+
+// NeedToPlace 当前还需要放置的鱼
+func (f *FishManager) NeedToPlace() []algorithm.Fish {
+	fishes := make([]algorithm.Fish, 0, len(f.Fishes))
+	for _, fish := range f.Fishes {
+		if fish.State == 0 {
+			fishes = append(fishes, algorithm.Fish{Typ: fish.Type})
+		}
+	}
+	return fishes
+}
+
+func (f *FishManager) CanClick(x, y int32) bool {
+	if f.Count <= 0 {
+		return false
+	}
+	if !f.Board.Validate() {
+		log.Errorf(static.Act7059, "冰面表盘校验失败：%s", utils.MarshalJson(f))
+		return false
+	}
+	block, err := f.Board.Get(int(x), int(y))
+	if err != nil {
+		log.Errorf(static.Act7059, "点击坐标位置错误：%s Board:", err.Error(), f.Board.ScopeJSON())
+		return false
+	}
+	if block.Clicked {
+		return false // 点击过的坐标
+	}
+	return true
+}
+
+// LockedFishesNum 当前解锁的鱼的数量
+func (f *FishManager) LockedFishesNum() int32 {
+	var num int32
+	for _, fish := range f.Fishes {
+		if fish.State > 0 {
+			num++
+		}
+	}
+	return num
+}
+
+// IsAllFishesUnlocked 盘面上的鱼是否都已解锁
+func (f *FishManager) IsAllFishesUnlocked() bool {
+	for _, fish := range f.Fishes {
+		if fish.State == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// UnlockedFishes 盘面上的未解锁的鱼
+func (f *FishManager) UnlockedFishes() []*DisplayFish {
+	fishes := make([]*DisplayFish, 0, len(f.Fishes))
+	for _, fish := range f.Fishes {
+		if fish.State == 0 {
+			fishes = append(fishes, fish)
+		}
+	}
+	return fishes
+}
+
+// 加载jackpot数据
+func (f *FishManager) loadJackpot(delivery *base.Delivery, unlockBet uint64) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.JP = new(JPInfo)
+	j := f.JP
+	jpCfg := GetJackpotConfig()
+	j.JPNameWeight = jpCfg.JPNameWeight
+	j.Jackpot = make(map[int32]*Jackpot, len(jpCfg.JPAward))
+	for k, v := range jpCfg.JPAward {
+		j.Jackpot[k] = new(Jackpot)
+		j.Jackpot[k].resetJackpot(delivery, v, unlockBet, k)
+	}
+}
+
+// AddIncrCount 增加jackpot的增长次数
+func (f *FishManager) AddIncrCount() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	j := f.JP
+	for key := range j.Jackpot {
+		j.Jackpot[key].IncrCount++
+		j.Jackpot[key].jpVal()
+	}
+}
+
+// FishAward 鱼奖励
+func (f *FishManager) FishAward(op *exchange.Options) (*exchange.Payload, int32) {
+	var (
+		res   = make([]*exchange.Prop, 0)
+		count int32
+	)
+	for _, fish := range f.Fishes {
+		if fish.State == 2 {
+			res = append(res, fish.Award...)
+			fish.State = 3
+			count++
+		}
+	}
+	if len(res) == 0 {
+		return nil, count
+	}
+	return exchange.Exchange(res, op), count
+}
+
+// CurrentLevelAward 当前关卡奖励
+func (f *FishManager) CurrentLevelAward(op *exchange.Options) *exchange.Payload {
+	var fishCount int //领取鱼奖励数量
+	for _, fish := range f.Fishes {
+		if fish.State == 3 {
+			fishCount++
+		}
+	}
+	if fishCount != len(f.Fishes) {
+		return nil
+	}
+	return exchange.Exchange(GetCfg().Level(f.CurrentLevel).Award, op)
+}
+
+// CurrentRoundsAward 当前回合奖励
+func (f *FishManager) CurrentRoundsAward(op *exchange.Options) *exchange.Payload {
+	if f.RoundsStatue == 0 {
+		return nil
+	}
+	return exchange.Exchange(GetDifficultyAwards(f.CurrentRounds), op)
+}
+
+// BonusGame 小游戏数据
+func (f *FishManager) BonusGame(op *exchange.Options) *act7059.BonusGame {
+	if f.JP == nil {
+		log.Errorf(static.Act7059, "[企鹅碎冰.BonusGame] jackpot数据为空")
+		return nil
+	}
+	var jps = make(map[int32]*act7059.JackpotInfo, len(f.JP.Jackpot))
+	for k, v := range f.JP.Jackpot {
+		jps[k] = &act7059.JackpotInfo{
+			Name:    act7059.Type(k),
+			Current: v.currentValue(),
+			Target:  JPSplinterCount,
+			Prop:    exchange.ProtoList(exchange.CoinList(v.JPAward), nil),
+		}
+	}
+
+	var res = make([]*act7059.Fish, len(f.Fishes))
+	for k, fish := range f.Fishes {
+		res[k] = &act7059.Fish{
+			Current: fish.FinishCount(),
+			Target:  int32(fish.Type),
+			Statue:  fish.State,
+			Type:    act7059.Type(fish.Type),
+			Hit:     f.PlaceOrder(k),
+			Award:   exchange.ProtoList(exchange.Calculate(fish.Award, op).Props, nil),
+		}
+	}
+	return &act7059.BonusGame{
+		Count:   int32(f.Count),
+		Jackpot: jps,
+		Fish:    res,
+	}
+}
+
+// Barrier 格子数据
+func (f *FishManager) Barrier(op *exchange.Options) *act7059.Barrier {
+	var lattice = make([]*act7059.Lattice, len(f.Board.Scope))
+	for i, cols := range f.Board.Scope {
+		row := make([]act7059.Type, len(cols))
+		for j := 0; j < len(cols); j++ {
+			if !cols[j].Clicked && cols[j].Fish.IsFish() {
+				row[j] = replaceType[cols[j].Fish]
+				continue
+			}
+			row[j] = act7059.Type(cols[j].Fish)
+		}
+		lattice[i] = &act7059.Lattice{Lattice: row}
+	}
+	return &act7059.Barrier{
+		LevelAward: exchange.ProtoList(exchange.Exchange(GetCfg().Level(f.CurrentLevel).Award, op).Props, nil),
+		Lattice:    lattice,
+	}
+}
+
+// Full 道具数量是否满了
+func (f *FishManager) Full() bool {
+	return f.Count >= PropMaxCount
+}
+
+func (f *FishManager) Json() string {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return utils.MarshalJson(f)
+}
+
+// IsFinishCurrentLevel 当前关卡是否完成
+func (f *FishManager) IsFinishCurrentLevel() bool {
+	for _, fish := range f.Fishes {
+		if fish.State != 3 {
+			return false
+		}
+	}
+	return true
+}
+
+// PlaceOrder 摆放顺序，标记1为可见区域
+func (f *FishManager) PlaceOrder(index int) []int32 {
+	fish := f.Fishes[index]
+	if len(fish.BelongTo) == 0 {
+		return make([]int32, int(fish.Type))
+	}
+	list := make([]int32, len(fish.BelongTo))
+	for i, block := range fish.BelongTo {
+		b, err := f.Board.Get(block.Coord.X, block.Coord.Y)
+		if err == nil && b.Clicked {
+			list[i] = 1
+		}
+	}
+	return list
+}
+
+// DisplayFish 展示在界面左下角的鱼
+type DisplayFish struct {
+	Index    int
+	State    int32              // 状态：0未解锁，1已解锁，2未领取，3已领取
+	Type     algorithm.FishType // 鱼的类型
+	BelongTo []algorithm.Block  // 对应哪些冰块，索引号0为鱼头位置
+	Award    []*exchange.Prop   // 奖励
+}
+
+// Done 当前是否集齐
+func (d *DisplayFish) Done() bool {
+	var num uint8
+	for _, block := range d.BelongTo {
+		if block.Clicked {
+			num++
+		}
+	}
+	if num == 0 {
+		return false
+	}
+	return num == uint8(d.Type.Value())
+}
+
+// FinishCount 完成拼图进度
+func (d *DisplayFish) FinishCount() int32 {
+	var num int32
+	for _, block := range d.BelongTo {
+		if block.Clicked {
+			num++
+		}
+	}
+	return num
+}
+
+// JACKPOT
+
+// genJP 生成jackpot值
+func (f *FishManager) genJP(delivery *base.Delivery, unlockBet uint64) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.JP = new(JPInfo)
+	j := f.JP
+	jpCfg := GetJackpotConfig()
+	j.JPNameWeight = jpCfg.JPNameWeight
+	j.Jackpot = make(map[int32]*Jackpot, len(jpCfg.JPAward))
+	for k, v := range jpCfg.JPAward {
+		j.Jackpot[k] = new(Jackpot)
+		j.Jackpot[k].resetJackpot(delivery, v, unlockBet, k)
+	}
+}
+
+func (f *FishManager) setJPNameWeight(jpName int32, weight int32) {
+	f.JP.JPNameWeight[jpName] = weight
+}
+
+// resetJpInfo jackpot重置
+func (f *FishManager) resetJpInfo(jpName int32, delivery *base.Delivery, unlockBet uint64) {
+	j := f.JP
+	if _, ok := j.Jackpot[jpName]; !ok {
+		return
+	}
+	jpCfg := GetJackpotConfig()
+	v, ok := jpCfg.JPAward[jpName]
+	if !ok {
+		log.Errorf(static.Act7059, "后台配置没有对应的jackpot(%d)", jpName)
+		return
+	}
+	j.Jackpot[jpName].resetJackpot(delivery, v, unlockBet, jpName)
+	splinters, ok := JPSplinterMap[act7059.Type(jpName)]
+	if !ok {
+		log.Errorf(static.Act7059, "游戏服配置没有对应的jackpot(%d)", jpName)
+		return
+	}
+	for _, splinter := range splinters {
+		v1, ok1 := jpCfg.JPNameWeight[splinter]
+		if !ok1 {
+			log.Errorf(static.Act7059, "后台配置没有对应的jackpot碎片(%d)", splinter)
+			continue
+		}
+		f.setJPNameWeight(splinter, v1)
+	}
+}
+
+// 获取jackpot名字和权重
+func (f *FishManager) jpNameWeight() ([]int32, []int32) {
+	var name, weight []int32
+	j := f.JP
+	for k, v := range j.JPNameWeight {
+		name = append(name, k)
+		weight = append(weight, v)
+	}
+	return name, weight
+}
+
+// PopSplinter 弹出碎片
+func (f *FishManager) PopSplinter() act7059.Type {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	name, weight := f.jpNameWeight()
+	j := f.JP
+	idx := utils.RandomIdxByWeightI32(weight)
+	if idx < 0 || idx > int32(len(name)-1) {
+		log.Errorf(static.Act7059, "jackpot碎片生成失败,权重下标: %d, 碎片长度: %d,权重长度:%d", idx, len(name), len(weight))
+		return act7059.Type_Empty
+	}
+	splinter := name[idx]
+	jpName := JPNameMap[splinter]
+	v, ok := j.Jackpot[int32(jpName)]
+	if !ok {
+		log.Errorf(static.Act7059, "jackpot碎片生成失败,玩家没有这个jackpot(%d)类型", jpName)
+		return act7059.Type_Empty
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	_, ok = v.Splinter[splinter]
+	if !ok {
+		log.Errorf(static.Act7059, "jackpot碎片生成失败,玩家没有这个jackpot(%d)类型没有这个碎片：%d", jpName, splinter)
+		return act7059.Type_Empty
+	}
+	v.Splinter[splinter] = 1
+	f.setJPNameWeight(splinter, 0)
+	return jpName
+}
+
+// JPAward 奖励
+func (f *FishManager) JPAward(op *exchange.Options, delivery *base.Delivery, unlockBet uint64) *exchange.Payload {
+	var awards []*exchange.Prop
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	j := f.JP
+	for k, jackpot := range j.Jackpot {
+		if jackpot.currentValue() == JPSplinterCount {
+			jackpot.jpVal()
+			awards = append(awards, exchange.CoinList(jackpot.JPAward)...)
+			f.resetJpInfo(k, delivery, unlockBet)
+		}
+	}
+	if len(awards) == 0 {
+		return nil
+	}
+	return exchange.Exchange(awards, op)
+}
