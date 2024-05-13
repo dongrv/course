@@ -20,5 +20,6 @@ func (h *Hello) String() string {
 
 func Say() {
 	hi := Hello{ID: 1, Message: "Hello, I am test1 tag"}
+
 	fmt.Printf("Say:%s\n", hi.String())
 }
