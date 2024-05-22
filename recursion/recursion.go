@@ -42,6 +42,8 @@ func Factorial(n int) int {
 	return n * Factorial(n-1)
 }
 
+// 棋盘寻路
+
 // Coord 坐标
 type Coord struct {
 	X, Y   int
