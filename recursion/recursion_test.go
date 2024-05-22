@@ -33,3 +33,13 @@ func TestFactorial(t *testing.T) {
 	assert.Equal(t, 6, Factorial(3))
 	assert.Equal(t, 3628800, Factorial(10))
 }
+
+func TestSearch(t *testing.T) {
+	board := NewChessBoard().
+		Init().
+		Print().
+		FromTo(Coord{X: 0, Y: 0}, Coord{X: 2, Y: 2})
+
+	assert.True(t, Search(board, Coord{X: 0, Y: 0}))
+
+}
