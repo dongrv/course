@@ -56,7 +56,7 @@ func (ab *AfricanBison) Hooves() uint8 {
 }
 
 func (ab *AfricanBison) Tail() bool {
-	println("黄牛有1个尾巴")
+	println("非洲野牛有1个尾巴")
 	return true
 }
 
