@@ -152,7 +152,7 @@ func (board *ChessBoard) Print() *ChessBoard {
 	println(strings.Repeat("=", 20))
 	for _, rows := range board.Scope {
 		for _, coord := range rows {
-			fmt.Printf("(%d, %d)\t", coord.X, coord.Y)
+			fmt.Printf("(%d, %d).%v\t", coord.X, coord.Y, coord.Placed)
 		}
 		println()
 	}
@@ -175,7 +175,6 @@ func (board *ChessBoard) Print() *ChessBoard {
         n3   n4       n5    n6
        / \  / \     / \    /  \
      n7 n8 n9 n10 n11 n12 n13 n14
-
 
 void backtracking(参数) {
     if (终止条件) {

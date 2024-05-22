@@ -40,11 +40,12 @@ func TestFactorial(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
+	start, end := Coord{X: 0, Y: 0}, Coord{X: 2, Y: 2}
 	board := NewChessBoard().
 		Init().
 		Print().
-		FromTo(Coord{X: 0, Y: 0}, Coord{X: 2, Y: 2})
+		FromTo(start, end)
 
-	assert.True(t, Search(board, Coord{X: 0, Y: 0}))
+	assert.True(t, Search(board, start))
 
 }

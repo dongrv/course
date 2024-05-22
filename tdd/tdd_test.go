@@ -11,8 +11,9 @@ func TestAddOne(t *testing.T) {
 
 func TestTransform(t *testing.T) {
 	assert.Equal(t, 100, Transform("100"))
+	assert.NotEqual(t, 100, Transform("gawergg"))
 }
 
 func TestDistance(t *testing.T) {
-	assert.Equal(t, 1, Distance(0, 0, 0, 1))
+	assert.Equal(t, 1.0, Distance(0, 0, 0, 1))
 }
