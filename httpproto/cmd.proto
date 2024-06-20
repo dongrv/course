@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package cmd;
+option go_package = "./cmd";
+
+// 批量发送产出消耗日志
+message BatchFinLog {
+  string From             = 1;
+  repeated FinLog FinLogs = 2;
+}
+
+message FinLog {
+  int32 UID                       = 1;   // 用户ID
+  int32 SpecialUser               = 2;   // 特殊用户标记
+  int32 PaidType                  = 3;   // 用户付费类型
+  double TotalPay                 = 4;   // 总付费
+  int64 SeriesId                  = 5;   // 机器系列ID
+  string SlotId                   = 6;   // 机器ID
+  uint64 Balance                  = 7;   // 账户筹码余额
+  uint64 Win                      = 8;   // 当前赢钱
+  uint64 Bet                      = 9;   // 当前下注
+  double BalanceUSD               = 10;  // 账户美元值
+  double WinUSD                   = 11;  // 赢钱美元值
+  double BetUSD                   = 12;  // 下注美元值
+  int32 SpinNum                   = 13;  // SPIN总次数
+  int32 IsBroke                   = 14;  // 破产标记：1是，0否
+  uint64 Reason                   = 15;  // 来源标记
+  int64 GamePlay                  = 16;  // 玩法
+  uint64 OneDollar                = 17;  // 当前1美元兑筹码
+  int64 RegisterTime              = 18;  // 注册时间
+  double AvgBet                   = 19;  // 千次平均BET
+  int64 CreateTime                = 20;  // 创建时间
+  int32 WorkScope                 = 21;  // 0外网和内网正式；1是内网测试
+  int32 Platform                  = 22;  // 1:android 2:ios
+  double OutRTP                   = 23;  // 输出RTP
+  int32 RTPState                  = 24;  // 0：正常状态 1：持金状态 2：水池状态
+  uint64 MinBet                   = 25;  // 固定档MinBet
+  int32 TriggerLucky              = 26;  // 机器是否触发了幸运值和假数据：0否1是
+  int32 Lv                        = 27;  // 用户当前等级
+  int32 VipLv                     = 28;  // VIP等级
+  int64 LastPayTime               = 29;  // 最近付费时间
+  double Spend                    = 30;  // 此条产出关联的当前付费价格，比如：商城购买物品消费100$
+  int32 RemarkUser                = 31;  // 备注用户：1后台备注用户
+  int32 RemarkFilter              = 32;  // 是否过滤统计：1过滤；0不过滤
+  int32 JackpotLv                 = 33;  // 解锁Jackpot的Bet档位，机器内spin、领钱、玩法都需要传递，档位：1-4档
+  int32 UnlockPlay                = 34;  // 解锁玩法类型 0：未解锁， 1：解锁长线玩法 （如果有新的玩法，可以用2、4、8）
+  bool UnlockMaxJackpot           = 35;  // 是否解锁最高jackpot档位
+  int32 ScheduleID                = 36;  // 目前生效档期
+  uint64 IncrGems                 = 37;  // 增加的二级货币
+  uint64 SubGems                  = 38;  // 消耗的二级货币
+  double IncrGemsUSD              = 39;  // 增加的二级货币美元值
+  double SubGemsUSD               = 40;  // 消耗的二级货币美元值
+  uint64 Gems                     = 41;  // 二级货币余额
+  double GemsUSD                  = 42;  // 二级货币余额美元
+  double GemsOneDollar            = 43;  // 当前1美金价值
+  repeated WinJackpot WinJackpots = 44;  // 命中jackpot及数量 json格式 eg: [{"Mini":2,"Major":1}] 如果没有中jackpot 字段为空
+  string UserGroup                = 45;  // 玩家所属分组
+  string Description              = 46;  // 说明
+  string ResVer                   = 47;  // 资源版本号
+  string MediaSource              = 48;  // 玩家注册渠道
+  int64 LastMinBet                = 49;  // 最近的minBet
+  int64 LastMaxBet                = 50;  // 最近的maxBet
+  double RTP200                   = 51;  // 最近200次平均RTP
+  double RTP1000                  = 52;  // 最近1000次平均RTP
+  string RFMGroup                 = 53;  // rfm分组
+  int64 BetUnlock                 = 54;  // 解锁BET
+  int32 BetType                   = 55;  // BET类型
+  string BetParam                 = 56;  // BET参数
+  double PayLeft                  = 57;  // 充值剩余筹码
+}
+
+message WinJackpot {
+  int32 JackpotID = 1;
+  int32 Cnt       = 2;
+}
