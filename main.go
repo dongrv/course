@@ -2,11 +2,12 @@ package main
 
 import (
 	"aaagame/tests/course/binarytest"
-	"aaagame/tests/course/buildtags"
+	"aaagame/tests/course/ginx"
 )
 
 func main() {
-	buildtags.Print()
+	//buildtags.Print()
+	ginx.Run()
 }
 
 func callTcp() {
