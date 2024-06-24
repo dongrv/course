@@ -2,6 +2,7 @@ package interfaceassert
 
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
@@ -39,4 +40,47 @@ func IsNil(i interface{}) bool {
 	value := *(*uintptr)(unsafe.Pointer(&i))
 	typ := *(*unsafe.Pointer)(unsafe.Pointer(uintptr(unsafe.Pointer(&i)) + unsafe.Sizeof(value)))
 	return typ == nil
+}
+
+var store = map[interface{}]int{}
+
+type Key struct {
+}
+
+func InterfaceType() {
+	i := (*Key)(nil)
+	store[i] = 1
+	fmt.Printf("%d\n", len(store))
+	delete(store, i)
+	fmt.Printf("after %d\n", len(store))
+}
+
+func init() {
+	runtime.GOMAXPROCS(1)
+}
+
+var (
+	listInt  []int64
+	listInt8 []int8
+)
+
+func init() {
+	for i := 0; i < 1e3; i++ {
+		listInt8 = append(listInt8, int8(i))
+	}
+	for i := 0; i < 1e3; i++ {
+		listInt = append(listInt, int64(i))
+	}
+}
+
+func LoopInt64Slice() {
+	for _, i2 := range listInt {
+		i2 = i2 * i2
+	}
+}
+
+func LoopInt8Slice() {
+	for _, i2 := range listInt8 {
+		i2 = i2 * i2
+	}
 }
