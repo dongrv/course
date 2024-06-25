@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 	"time"
 )
@@ -101,6 +102,47 @@ func Run() {
 		names := []string{"lena", "austin", "foo"}
 
 		c.SecureJSON(http.StatusOK, names) // 将输出：while(1);["lena","austin","foo"]
+	})
+
+	// 使用多种格式输出结果
+	r.GET("/someJSON", func(c *gin.Context) {
+		// gin.H 是 map[string]interface{} 的一种快捷方式
+		c.JSON(http.StatusOK, gin.H{"status": http.StatusOK, "message": "hey"})
+	})
+	r.GET("/moreJSON", func(c *gin.Context) {
+		var msg struct {
+			Name    string
+			Message string
+			Number  int
+		}
+		msg.Name = "Lena"
+		msg.Message = "hey"
+		msg.Number = 123
+		c.JSON(http.StatusOK, msg)
+	})
+	r.GET("/someXML", func(c *gin.Context) {
+		c.XML(http.StatusOK, gin.H{"status": http.StatusOK, "message": "hey"})
+	})
+	r.GET("/someYAML", func(c *gin.Context) {
+		c.YAML(http.StatusOK, gin.H{"status": http.StatusOK, "message": "hey"})
+	})
+	r.GET("/someProtobuf", func(c *gin.Context) {
+		reps := []int64{1, 2}
+		label := "test"
+
+		type ProtoStruct struct {
+			proto.Message
+			Label string
+			Reps  []int64
+		}
+
+		data := &ProtoStruct{
+			Label: label,
+			Reps:  reps,
+		}
+		// 请注意，数据在响应中变为二进制数据
+		// 将输出被 ProtoStruct protobuf 序列化了的数据
+		c.ProtoBuf(http.StatusOK, data)
 	})
 
 	if err := r.Run(":8086"); err != nil {
