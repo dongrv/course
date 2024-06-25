@@ -38,7 +38,11 @@ func Run() {
 	r := gin.Default()
 	gin.SetMode(gin.DebugMode)
 
-	r.Use(authMiddleware, returnZapLoggerMiddleware(logger))
+	r.Use(
+		authMiddleware,
+		returnZapLoggerMiddleware(logger),
+		securityHeaderMiddleware,
+	)
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -104,8 +108,18 @@ func Run() {
 		c.SecureJSON(http.StatusOK, names) // 将输出：while(1);["lena","austin","foo"]
 	})
 
+	r.GET("/jsonp", func(c *gin.Context) {
+		data := map[string]interface{}{
+			"foo": "bar",
+		}
+
+		// /JSONP?callback=x
+		// 将输出：x({\"foo\":\"bar\"})
+		c.JSONP(http.StatusOK, data)
+	})
+
 	// 使用多种格式输出结果
-	r.GET("/someJSON", func(c *gin.Context) {
+	r.GET("/jsonResult", func(c *gin.Context) {
 		// gin.H 是 map[string]interface{} 的一种快捷方式
 		c.JSON(http.StatusOK, gin.H{"status": http.StatusOK, "message": "hey"})
 	})
@@ -142,7 +156,7 @@ func Run() {
 		}
 		// 请注意，数据在响应中变为二进制数据
 		// 将输出被 ProtoStruct protobuf 序列化了的数据
-		c.ProtoBuf(http.StatusOK, data)
+		c.ProtoBuf(http.StatusOK, data) // 会报错，需要真实的protobuf结构体
 	})
 
 	if err := r.Run(":8086"); err != nil {
@@ -181,4 +195,21 @@ func returnZapLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.String("latency", latency.String()),
 		)
 	}
+}
+
+var expectedHost = "localhost:8086"
+
+func securityHeaderMiddleware(c *gin.Context) {
+	if c.Request.Host != expectedHost {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid host header"})
+		return
+	}
+	c.Header("X-Frame-Options", "DENY")
+	c.Header("Content-Security-Policy", "default-src 'self'; connect-src *; font-src *; script-src-elem * 'unsafe-inline'; img-src * data:; style-src * 'unsafe-inline';")
+	c.Header("X-XSS-Protection", "1; mode=block")
+	c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+	c.Header("Referrer-Policy", "strict-origin")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Permissions-Policy", "geolocation=(),midi=(),sync-xhr=(),microphone=(),camera=(),magnetometer=(),gyroscope=(),fullscreen=(self),payment=()")
+	c.Next()
 }
