@@ -42,16 +42,27 @@ func IsNil(i interface{}) bool {
 	return typ == nil
 }
 
-var store = map[interface{}]int{}
-
 type Key struct {
 }
 
+type Key2 struct {
+}
+
 func InterfaceType() {
+
+	var store = map[interface{}]int{}
 	i := (*Key)(nil)
+	j := (*Key2)(nil)
 	store[i] = 1
+	store[j] = 2
 	fmt.Printf("%d\n", len(store))
-	delete(store, i)
+	var list []interface{}
+	for k := range store {
+		list = append(list, k)
+	}
+	for _, v := range list {
+		delete(store, v)
+	}
 	fmt.Printf("after %d\n", len(store))
 }
 

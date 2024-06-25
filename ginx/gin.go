@@ -189,7 +189,7 @@ func Run() {
 		}
 		a := &formA{}
 		b := &formB{}
-		// ShouldBindBodyWith 可以服用c.Request.Body
+		// ShouldBindBodyWith 可以复用c.Request.Body
 		if errA := c.ShouldBindBodyWith(a, binding.JSON); errA == nil {
 			c.String(http.StatusOK, "the body should be formA")
 		} else if errB := c.ShouldBindBodyWith(b, binding.JSON); errB == nil {
