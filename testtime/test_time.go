@@ -72,3 +72,17 @@ func Select() {
 		fmt.Println(2)
 	}
 }
+
+func LoopSleep() {
+	retry := 0
+	for {
+		v := 500 << retry
+		time.Sleep(time.Duration(v) * time.Millisecond)
+		println("sleep:", v, " ms")
+		retry++
+		if retry > 2 {
+			break
+		}
+	}
+	println("done")
+}

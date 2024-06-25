@@ -13,3 +13,7 @@ func TestTimeAfter(t *testing.T) {
 func TestSelect(t *testing.T) {
 	Select()
 }
+
+func TestLoopSleep(t *testing.T) {
+	LoopSleep()
+}
