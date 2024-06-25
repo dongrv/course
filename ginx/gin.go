@@ -3,9 +3,11 @@ package ginx
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/proto"
+	"log"
 	"net/http"
 	"time"
 )
@@ -37,6 +39,9 @@ func Run() {
 
 	r := gin.Default()
 	gin.SetMode(gin.DebugMode)
+	gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
+		log.Printf("endpoint %v %v %v %v\n", httpMethod, absolutePath, handlerName, nuHandlers)
+	}
 
 	r.Use(
 		authMiddleware,
@@ -159,6 +164,41 @@ func Run() {
 		c.ProtoBuf(http.StatusOK, data) // 会报错，需要真实的protobuf结构体
 	})
 
+	// 绑定uri
+	type Person struct {
+		ID   string `uri:"id" binding:"required,uuid"`
+		Name string `uri:"name" binding:"required"`
+	}
+
+	r.GET("/:name/:id", func(c *gin.Context) {
+		var person Person
+		if err := c.ShouldBindUri(&person); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": err.Error()})
+			return
+		}
+		c.JSONP(http.StatusOK, gin.H{"name": person.Name, "uuid": person.ID})
+	})
+
+	// 多次绑定
+	r.GET("/multibind", func(c *gin.Context) {
+		type formA struct {
+			Foo string `json:"foo" xml:"foo" binding:"required"`
+		}
+		type formB struct {
+			Bar string `json:"bar" xml:"bar" binding:"required"`
+		}
+		a := &formA{}
+		b := &formB{}
+		// ShouldBindBodyWith 可以服用c.Request.Body
+		if errA := c.ShouldBindBodyWith(a, binding.JSON); errA == nil {
+			c.String(http.StatusOK, "the body should be formA")
+		} else if errB := c.ShouldBindBodyWith(b, binding.JSON); errB == nil {
+			c.String(http.StatusOK, "the body should be JSON formB")
+		} else if errB := c.ShouldBindBodyWith(b, binding.XML); errB == nil {
+			c.String(http.StatusOK, "the body should be XML formB")
+		}
+	})
+
 	if err := r.Run(":8086"); err != nil {
 		fmt.Printf("[GIN]Server run error found:%s", err.Error())
 		return
@@ -166,14 +206,14 @@ func Run() {
 }
 
 func authMiddleware(c *gin.Context) {
-	username, ok := c.GetQuery("username")
+	/*username, ok := c.GetQuery("username")
 	if !ok || username != "Tony" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "username needed",
 		})
 		return
 	}
-	println("当前用户：", username)
+	println("当前用户：", username)*/
 	c.Next()
 }
 
