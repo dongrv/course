@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dongrv/iterator"
 	"google.golang.org/protobuf/proto"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 type Requester interface {
 	Topic() Topic
 	Header() http.Header
-	Description() string
 	Do() error
 	Backup()
 	Raw() proto.Message
@@ -36,7 +36,6 @@ type Base struct{} // 默认实现
 
 func (b *Base) Topic() Topic        { return "" }
 func (b *Base) Header() http.Header { return nil }
-func (b *Base) Description() string { return "" }
 func (b *Base) Do() error           { return nil }
 func (b *Base) Backup()             {}
 func (b *Base) Raw() proto.Message  { return nil }
@@ -87,9 +86,10 @@ type Call struct {
 	single SingleFunc
 	batch  BatchFunc
 	value  []Processor
+	cap    int
 }
 
-func NewCall(cap int) *Call { return &Call{value: make([]Processor, 0, 50)} }
+func NewCall(cap int) *Call { return &Call{value: make([]Processor, 0, cap), cap: cap} }
 
 func (c *Call) SetSingle(s SingleFunc) *Call {
 	c.single = s
@@ -109,8 +109,9 @@ func (c *Call) Handle(processor Processor) {
 		return
 	}
 	c.value = append(c.value, processor)
-	if len(c.value) >= cap(c.value) {
+	if len(c.value) >= c.cap {
 		c.batch(c.value)
+		c.value = c.value[:0]
 	}
 }
 
@@ -126,22 +127,35 @@ func newCoroutine(wg *sync.WaitGroup, op *Option) *coroutine {
 
 func (g *coroutine) Run(wg *sync.WaitGroup) {
 	wg.Add(1)
-	println("启动了一个协程")
+	//println("启动了一个协程")
 	defer wg.Done()
+	timer := time.NewTimer(time.Duration(1500+rand.Intn(1500)) * time.Millisecond) // 增加随机性
+	defer timer.Stop()
 	for {
 		select {
 		case meta := <-g.channel.Pop():
 			g.call.Handle(meta)
 			g.live = time.Now()
+		case <-timer.C:
+			g.clear()
 		case <-g.stop:
-			if g.channel.Size() > 0 {
-				for meta := range g.channel.Pop() {
-					g.call.Handle(meta) // 清空队列
-				}
-			}
-			println("退出了一个协程")
+			g.clear()
 			return
 		}
+	}
+}
+
+func (g *coroutine) clear() {
+	if g.channel.Size() > 0 {
+		for meta := range g.channel.Pop() { // 清空管道
+			g.call.Handle(meta)
+			if g.channel.Size() == 0 {
+				break
+			}
+		}
+	}
+	if g.call.batch != nil {
+		g.call.batch(g.call.value)
 	}
 }
 
@@ -191,12 +205,13 @@ func (t Topic) String() string {
 
 type Pool struct {
 	mu    sync.RWMutex
+	sort  []Topic
 	store map[Topic]*group
 	state bool
 }
 
 func New() *Pool {
-	return &Pool{store: map[Topic]*group{}, state: true}
+	return &Pool{sort: make([]Topic, 0), store: map[Topic]*group{}, state: true}
 }
 
 var defaultPool *Pool
@@ -222,6 +237,7 @@ func (pool *Pool) Register(op *Option) {
 	if _, ok := pool.store[op.Topic]; ok {
 		return
 	}
+	pool.sort = append(pool.sort, op.Topic)
 	pool.store[op.Topic] = newGroup(op)
 }
 
@@ -243,8 +259,8 @@ func (pool *Pool) Quit() {
 	if len(pool.store) == 0 {
 		return
 	}
-	for topic, g := range pool.store {
-		g.Quit()
+	for _, topic := range pool.sort {
+		pool.store[topic].Quit() // 按照注册顺序退出
 		fmt.Printf("The topic:%s exit\n", topic)
 	}
 	fmt.Print("All topics exit\n")
