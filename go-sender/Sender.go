@@ -47,6 +47,7 @@ type ChanProcessor interface {
 	Idle() bool
 	Push(Processor) bool
 	Pop() <-chan Processor
+	Close()
 }
 
 type Channel struct {
@@ -58,7 +59,8 @@ func NewChannel(cap int) *Channel {
 }
 
 func (c *Channel) Size() int  { return len(c.ch) }
-func (c *Channel) Idle() bool { return len(c.ch) <= cap(c.ch) }
+func (c *Channel) Close()     { close(c.ch) }
+func (c *Channel) Idle() bool { return len(c.ch) < cap(c.ch) }
 func (c *Channel) Push(p Processor) bool {
 	if !c.Idle() {
 		return false
@@ -95,9 +97,16 @@ func (c *Call) SetSingle(s SingleFunc) *Call {
 	c.single = s
 	return c
 }
+
 func (c *Call) SetBatch(b BatchFunc) *Call {
 	c.batch = b
 	return c
+}
+
+func (c *Call) clear() {
+	if c.batch != nil && len(c.value) > 0 {
+		c.batch(c.value)
+	}
 }
 
 func (c *Call) Handle(processor Processor) {
@@ -154,14 +163,13 @@ func (g *coroutine) clear() {
 			}
 		}
 	}
-	if g.call.batch != nil {
-		g.call.batch(g.call.value)
-	}
+	g.call.clear()
 }
 
 func (g *coroutine) Quit() {
 	g.stop <- struct{}{}
 	close(g.stop)
+	g.channel.Close()
 }
 
 type group struct {
