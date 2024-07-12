@@ -29,3 +29,10 @@ func Distance(x1, y1, x2, y2 float64) float64 {
 	o := math.Abs(y1 - y2)
 	return math.Sqrt(v*v + o*o)
 }
+
+func TrimLen() {
+	var list []int = make([]int, 100, 1000)
+	println("len", len(list), "cap", cap(list))
+	list = list[:len(list)]
+	println("len", len(list), "cap", cap(list))
+}

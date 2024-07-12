@@ -17,3 +17,7 @@ func TestTransform(t *testing.T) {
 func TestDistance(t *testing.T) {
 	assert.Equal(t, 1.0, Distance(0, 0, 0, 1))
 }
+
+func TestTrimLen(t *testing.T) {
+	TrimLen()
+}
