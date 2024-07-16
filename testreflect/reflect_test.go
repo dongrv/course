@@ -13,3 +13,7 @@ func TestReflectValueToInterfaceValue(t *testing.T) {
 func TestFieldByName(t *testing.T) {
 	ModifyValueCallMethod()
 }
+
+func TestGetFields(t *testing.T) {
+	GetFields()
+}

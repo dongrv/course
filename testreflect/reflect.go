@@ -3,6 +3,7 @@ package testreflect
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // <Value, Type>
@@ -121,4 +122,25 @@ func ModifyValueCallMethod() {
 		fmt.Println("say:", say[0].Interface().(string))
 	}
 
+}
+
+type Struct struct {
+	FieldA string
+	FiledB int
+	FieldC float64
+}
+
+func ReflectTypeToFields(obj interface{}) ([]string, string) {
+	typ := reflect.TypeOf(obj)
+	var fields []string
+	for i := 0; i < typ.NumField(); i++ {
+		fields = append(fields, typ.Field(i).Name)
+	}
+	str := fmt.Sprintf("`%s`", strings.Join(fields, "`,`"))
+	return fields, str
+}
+
+func GetFields() {
+	list, str := ReflectTypeToFields(Struct{})
+	fmt.Printf("%v\n%s\n", list, str)
 }
