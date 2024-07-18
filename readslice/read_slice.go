@@ -1,6 +1,9 @@
 package readslice
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func TestSlice() {
 	var msg = []int{0, 1, 2, 3, 4, 5, 6, 7, 8}
@@ -25,4 +28,10 @@ func TestSlice() {
 
 func grow(list []int32) {
 	list = append(list, 1, 2, 3, 4, 5, 6) // TODO 触发扩容，创建了新引用类型，局部变量 list 指向 新引用地址，不再作用原引用
+}
+
+type Fields []string
+
+func (f Fields) Join() string {
+	return "`" + strings.Join(f, "`,`") + "`"
 }
