@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
 
 // https://xie.infoq.cn/article/495308325c34c996632275b7c
 
-func div(a, b int32) float64 {
+func Div(a, b int32) float64 {
 	return float64(a) / float64(b)
 }
 
@@ -44,8 +45,8 @@ func Match(value []int8, bound int8) int8 {
 
 func CausePanic() {
 	// 空指针
-	type Demo struct{ Id int }
-	dict := map[int32]*Demo{1: {Id: 100}}
+	type Foo struct{ Id int }
+	dict := map[int32]*Foo{1: {Id: 100}}
 	if _, ok := dict[0]; ok {
 		fmt.Printf("VIP Id:%d\n", dict[0].Id)
 	}
@@ -58,7 +59,7 @@ func CausePanic() {
 	}()
 	go func() {
 		for i := 0; i < 1000; i++ {
-			dict[int32(i)] = &Demo{Id: i}
+			dict[int32(i)] = &Foo{Id: i}
 		}
 	}()
 
@@ -107,4 +108,68 @@ func CausePanic() {
 		// todo something
 	}
 
+}
+
+type Bar struct {
+	mu     sync.RWMutex
+	Number int
+}
+
+func (b *Bar) Get() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.Number
+}
+func (b *Bar) Counter() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.Number++
+	return b.Get()
+}
+
+type Coord struct {
+	Country  string
+	Province string
+	Region   *Region
+}
+
+type Region struct {
+	Zip int64
+}
+
+func Analyze() {
+	coord := new(Coord)
+	fmt.Printf("coord addr:%p\n", &coord)
+	fmt.Printf("coord pointer value:%p\n", coord)
+	fmt.Printf("coord.Region addr:%p\n", &coord.Region)
+	fmt.Printf("coord.Region pointer value:%p\n", coord.Region)
+	fmt.Printf("coord.Region object value:%v\n", *coord.Region)
+}
+
+func AnalyzeSlice() {
+	// 情景一
+	buf := make([]byte, 1024)
+	buf[0] = 'a'
+	fmt.Printf("buf addr:%p\n", &buf)
+	fmt.Printf("buf reference addr:%p\n", buf)
+	fmt.Printf("buf[0] addr:%p\n", &buf[0])
+	buf = growSlice(buf)
+	fmt.Printf("after grow buf addr:%p\n", &buf)
+	fmt.Printf("after grow buf reference addr:%p\n", buf)
+	fmt.Printf("after grow buf[0] addr:%p\n", &buf[0])
+	println(strings.Repeat("=", 100))
+	// 情景二
+	buf2 := make([]byte, 512, 1024)
+	fmt.Printf("buf2 addr:%p\n", &buf2)
+	fmt.Printf("buf2 reference addr:%p\n", buf2)
+	fmt.Printf("buf2[0] addr:%p\n", &buf2[0])
+	buf2 = growSlice(buf2)
+	fmt.Printf("after grow buf addr:%p\n", &buf2)
+	fmt.Printf("after grow buf reference addr:%p\n", buf2)
+	fmt.Printf("after grow buf[0] addr:%p\n", &buf2[0])
+}
+
+func growSlice(buf []byte) []byte {
+	buf = append(buf, 'b')
+	return buf
 }
