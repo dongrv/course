@@ -171,5 +171,7 @@ func AnalyzeSlice() {
 
 func growSlice(buf []byte) []byte {
 	buf = append(buf, 'b')
+	fmt.Printf("in grow buf addr:%p\n", &buf)
+	fmt.Printf("in grow buf reference addr:%p\n", buf)
 	return buf
 }
