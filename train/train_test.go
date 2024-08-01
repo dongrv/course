@@ -20,7 +20,6 @@ func TestBar_Counter(t *testing.T) {
 	//t.Log(bar.Counter())
 }
 
-// 例1
 func TestBar_Get(t *testing.T) {
 	bar := new(Bar)
 	fmt.Printf("bar's addr %p\n", &bar)
@@ -28,12 +27,18 @@ func TestBar_Get(t *testing.T) {
 	fmt.Printf("bar pointer's value %+v\n", *bar)
 }
 
-// 例2
 func TestAnalyze(t *testing.T) {
 	Analyze()
 }
 
-// 例3
 func TestAnalyzeSlice(t *testing.T) {
 	AnalyzeSlice()
+}
+
+func TestPointerAndEscape(t *testing.T) {
+	PointerAndEscape()
+}
+
+func TestReflectMethod(t *testing.T) {
+	ReflectMethod()
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -174,4 +175,51 @@ func growSlice(buf []byte) []byte {
 	fmt.Printf("in grow buf addr:%p\n", &buf)
 	fmt.Printf("in grow buf reference addr:%p\n", buf)
 	return buf
+}
+
+// 逃逸分析
+
+type Role struct {
+	Id   int32
+	Play string
+}
+
+func PointerAndEscape() map[string]*Role {
+	roles := make(map[string]*Role)
+	roles["Tom"] = &Role{Id: 0, Play: "Tiger"}
+	roles["Lucy"] = &Role{Id: 0, Play: "Lion"}
+	roles["Mark"] = &Role{Id: 0, Play: "Leopard"}
+	//roles := map[string]*Role{
+	//	"Tom":  {Id: 0, Play: "Tiger"},
+	//	"Lucy": {Id: 1, Play: "Lion"},
+	//	"Mark": {Id: 2, Play: "Leopard"},
+	//}
+	changeRole(&(*roles["Tom"]), "Bear")
+	fmt.Printf("tom value pointer:%p\n", roles["Tom"])
+	role := *roles["Lucy"]
+	changeRole(&role, "Wolf")
+	fmt.Printf("tom value pointer:%p\n", roles["Lucy"])
+	return roles
+}
+
+func changeRole(r *Role, play string) {
+	println(strings.Repeat("=", 100))
+	r.Play = play
+	fmt.Printf("in func %d value pointer:%p\n", r.Id, r)
+}
+
+type Gopher struct{}
+
+func (g *Gopher) Code()          {}
+func (g *Gopher) Name() string   { return "go" }
+func (g *Gopher) Author() string { return "google" }
+
+// 反射方法名按照字典排序a-z
+
+func ReflectMethod() {
+	g := &Gopher{}
+	typ := reflect.TypeOf(g)
+	for i := 0; i < typ.NumMethod(); i++ {
+		fmt.Printf("methed:%s\n", typ.Method(i).Name)
+	}
 }
