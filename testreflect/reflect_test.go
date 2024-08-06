@@ -29,3 +29,7 @@ func TestMakeObjByReflectType(t *testing.T) {
 func TestModifyFiledValue(t *testing.T) {
 	SetFiledValue()
 }
+
+func TestBinToObj(t *testing.T) {
+	BinToObj()
+}

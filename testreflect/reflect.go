@@ -1,7 +1,10 @@
 package testreflect
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -200,3 +203,91 @@ func SetFiledValue() {
 }
 
 // 使用二进制报文+反射反序列化为结构体对象
+
+type Example struct {
+	ID   uint32
+	Name string
+	Age  uint16
+}
+
+// BinToObj 二进制报文赋值到对象
+func BinToObj() {
+	// 报文
+	name := "Alice"
+	binaryData := make(
+		[]byte, 0,
+		binary.MaxVarintLen32+(binary.MaxVarintLen32+len(name))+binary.MaxVarintLen16,
+		// ID + (字符串值的长度+字符串值实际占用字节) + Age
+	)
+	order := binary.LittleEndian
+	buf := bytes.NewBuffer(binaryData)
+	var err error
+	// 写入ID数值
+	if err = binary.Write(buf, order, uint32(123456)); err != nil {
+		panic(err)
+	}
+	// 写入描述字符串长度的值和字符串实际占用字节
+	if err = binary.Write(buf, order, uint32(len(name))); err != nil {
+		panic(err)
+	}
+	if _, err = buf.WriteString(name); err != nil {
+		panic(err)
+	}
+	// 写入Age数值
+	if err = binary.Write(buf, order, uint16(30)); err != nil {
+		panic(err)
+	}
+
+	example := Example{}
+	if err = binaryToStruct(buf.Bytes(), &example); err != nil {
+		panic(err)
+	}
+	fmt.Printf("%+v", example)
+}
+
+// binaryToStruct 将二进制数据反序列化为结构体
+func binaryToStruct(data []byte, s interface{}) error {
+	val := reflect.ValueOf(s).Elem()
+	t := val.Type()
+
+	reader := bytes.NewReader(data)
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldVal := val.Field(i)
+
+		// 根据字段类型读取二进制数据
+		switch field.Type.Kind() {
+		case reflect.Uint32:
+			var u uint32
+			err := binary.Read(reader, binary.LittleEndian, &u)
+			if err != nil {
+				return err
+			}
+			fieldVal.SetUint(uint64(u))
+		case reflect.String:
+			var n uint32
+			err := binary.Read(reader, binary.LittleEndian, &n)
+			if err != nil {
+				return err
+			}
+			b := make([]byte, n)
+			_, err = io.ReadFull(reader, b)
+			if err != nil {
+				return err
+			}
+			fieldVal.SetString(string(b))
+		case reflect.Uint16:
+			var u uint16
+			err := binary.Read(reader, binary.LittleEndian, &u)
+			if err != nil {
+				return err
+			}
+			fieldVal.SetUint(uint64(u))
+		default:
+			return fmt.Errorf("unsupported type %s for field %s", field.Type, field.Name)
+		}
+	}
+
+	return nil
+}
