@@ -42,3 +42,8 @@ func TestPointerAndEscape(t *testing.T) {
 func TestReflectMethod(t *testing.T) {
 	ReflectMethod()
 }
+
+func TestDeleteSlice(t *testing.T) {
+	t.Helper()
+	DeleteSlice()
+}

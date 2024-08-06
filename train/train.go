@@ -223,3 +223,15 @@ func ReflectMethod() {
 		fmt.Printf("methed:%s\n", typ.Method(i).Name)
 	}
 }
+
+// DeleteSlice 删除指定索引前的元素
+func DeleteSlice() {
+	var a = []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9}
+	i := 1
+	if i < len(a)-1 {
+		copy(a[i:], a[i+1:])
+	}
+	a[len(a)-1] = nil // 多出一个尾部元素，空余位置置空有助于垃圾回收
+	a = a[:len(a)-1]
+	fmt.Printf("%v", a)
+}
