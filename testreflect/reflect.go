@@ -2,6 +2,7 @@ package testreflect
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -144,3 +145,58 @@ func GetFields() {
 	list, str := ReflectTypeToFields(Struct{})
 	fmt.Printf("%v\n%s\n", list, str)
 }
+
+// 使用反射设置配置
+// 系统变量存在则设置到对象
+
+type Config struct {
+	Name    string `json:"server-name"`
+	IP      string `json:"server-ip"`
+	URL     string `json:"server-url"`
+	Timeout string `json:"timeout"`
+}
+
+func ReadConfig() *Config {
+	config := Config{}
+	typ := reflect.TypeOf(config)
+	value := reflect.Indirect(reflect.ValueOf(&config))
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if v, ok := f.Tag.Lookup("json"); ok {
+			key := fmt.Sprintf("CONFIG_%s", strings.ReplaceAll(strings.ToUpper(v), "-", "_"))
+			if env, exist := os.LookupEnv(key); exist {
+				value.FieldByName(f.Name).Set(reflect.ValueOf(env))
+			}
+		}
+	}
+	return &config
+}
+
+func ReflectEnv() {
+	os.Setenv("CONFIG_SERVER_NAME", "global_server")
+	os.Setenv("CONFIG_SERVER_IP", "10.0.0.1")
+	os.Setenv("CONFIG_SERVER_URL", "baidu.com")
+	c := ReadConfig()
+	fmt.Printf("%+v", c)
+}
+
+// MakeObjByReflectType 通过反射类型创建对象
+func MakeObjByReflectType() {
+	var config *Config
+	typ := reflect.TypeOf(config)
+	config, _ = reflect.New(typ).Interface().(*Config)
+	fmt.Printf("%+v", config)
+}
+
+// SetFiledValue 修改字段值
+func SetFiledValue() {
+	typ := reflect.TypeOf(Config{})
+	elem := reflect.New(typ).Elem()
+	elem.Field(0).SetString("name")
+	elem.Field(1).SetString("ip")
+	elem.Field(2).SetString("url")
+	elem.Field(3).SetString("timeout")
+	fmt.Printf("%+v\n", elem.Interface())
+}
+
+// 使用二进制报文+反射反序列化为结构体对象

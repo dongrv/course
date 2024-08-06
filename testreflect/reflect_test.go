@@ -17,3 +17,15 @@ func TestFieldByName(t *testing.T) {
 func TestGetFields(t *testing.T) {
 	GetFields()
 }
+
+func TestReflectEnv(t *testing.T) {
+	ReflectEnv()
+}
+
+func TestMakeObjByReflectType(t *testing.T) {
+	MakeObjByReflectType()
+}
+
+func TestModifyFiledValue(t *testing.T) {
+	SetFiledValue()
+}
