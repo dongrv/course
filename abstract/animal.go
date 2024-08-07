@@ -98,13 +98,13 @@ type Animal interface {
 	Run() // 跑
 }
 
-type Trigger struct{}
+type Tiger struct{}
 
-func (t *Trigger) Eat() {
+func (t *Tiger) Eat() {
 	println("老虎吃肉...")
 }
 
-func (t *Trigger) Run() {
+func (t *Tiger) Run() {
 	println("老虎跑...")
 }
 

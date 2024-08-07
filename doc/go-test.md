@@ -40,10 +40,13 @@ go test -run TestFunction1|TestFunction2
 
 #### 3. 忽略某些测试
 
-- **忽略特定测试**：使用 `-short` 选项来忽略标记为 `Long` 的测试函数。
+- **忽略特定测试**：使用 `-short` 选项来忽略代码头部有testing.Shrot()的测试函数。如果你经常需要运行长时间的测试，但又不想每次都手动去掉 -short 参数，你可以考虑为这些测试添加标签。例如，你可以将这些测试标记为 integration 或 long，然后在运行测试时使用 -tags 参数来指定只运行这些标记的测试.
 
 ```sh
 go test -short
+```
+```sh
+go test -tags=Long // 会运行 TestLongxx 的测试函数
 ```
 
 #### 4. 设置并行级别
