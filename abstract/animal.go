@@ -170,3 +170,30 @@ func SayHandler(h Handler) Handler {
 		println("咆哮")
 	})
 }
+
+type Base struct {
+	ID int32
+}
+
+func (b *Base) Call() {
+	println("base call")
+}
+
+type Derived struct {
+	Base
+	ID int32
+}
+
+func (d *Derived) Call() {
+	println("derived call")
+}
+
+func Call() {
+	derived := Derived{
+		Base: Base{ID: 10},
+		ID:   100,
+	}
+	println(derived.Base.ID, derived.ID)
+	derived.Base.Call()
+	derived.Call()
+}

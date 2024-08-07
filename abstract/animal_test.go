@@ -29,3 +29,7 @@ func TestBullDo(t *testing.T) {
 func TestName(t *testing.T) {
 	SayHandler(EatHandler(RunHandler(Name()))).Do()
 }
+
+func TestDerived_Call(t *testing.T) {
+	Call()
+}
