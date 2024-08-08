@@ -47,3 +47,11 @@ func TestDeleteSlice(t *testing.T) {
 	t.Helper()
 	DeleteSlice()
 }
+
+func TestSliceReference(t *testing.T) {
+	SliceReference()
+}
+
+func TestAccessUnderlyingSlice(t *testing.T) {
+	AccessUnderlyingSlice()
+}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 // https://xie.infoq.cn/article/495308325c34c996632275b7c
@@ -175,6 +176,29 @@ func growSlice(buf []byte) []byte {
 	fmt.Printf("in grow buf addr:%p\n", &buf)
 	fmt.Printf("in grow buf reference addr:%p\n", buf)
 	return buf
+}
+
+func SliceReference() {
+	s := []int{123, 456, 789}
+	println()
+	fmt.Printf("&s=%p\ns=%p\n\n", &s, s)
+	fmt.Printf("&s[0]=%p\n&s[1]=%p\n&s[1]=%p\n\n", &s[0], &s[1], &s[2])
+}
+
+func AccessUnderlyingSlice() {
+	s := make([]int, 0, 5)
+	s = append(s, 123, 456, 789)
+	headerPtr := (*[3]uintptr)(unsafe.Pointer(&s))
+	arrayPtr := *(*int)(unsafe.Pointer(&headerPtr[0])) // 底层数组指针
+	length := *(*int)(unsafe.Pointer(&headerPtr[1]))   // 长度
+	capacity := *(*int)(unsafe.Pointer(&headerPtr[2])) // 容量
+	fmt.Println("当前s的底层值：")
+	fmt.Printf("type slice struct{\n\tarray \t= 0x%x\n\tlen \t= %d\n\tcap \t= %d\n\n}\n",
+		arrayPtr, length, capacity)
+	fmt.Println("访问s.array的值：")
+	for i := 0; i < length; i++ {
+		fmt.Printf("&s[%d]=%d\n", i, *(*int)(unsafe.Pointer(uintptr(arrayPtr) + uintptr(i)*unsafe.Sizeof(arrayPtr))))
+	}
 }
 
 // 逃逸分析
