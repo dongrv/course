@@ -55,3 +55,7 @@ func TestSliceReference(t *testing.T) {
 func TestAccessUnderlyingSlice(t *testing.T) {
 	AccessUnderlyingSlice()
 }
+
+func TestParseFuncStack(t *testing.T) {
+	ParseFuncStack()
+}

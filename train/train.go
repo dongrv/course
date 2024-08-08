@@ -201,6 +201,15 @@ func AccessUnderlyingSlice() {
 	}
 }
 
+func ParseFuncStack() {
+	var (
+		a int   // 0
+		b []int // slice{array:nil, len:0, cap:0}
+	)
+	b = append(b, 1, 2, 3, 4, 5) // slice{array:&[6]{1, 2, 3, 4, 5, NULL}, len:5, cap:6}
+	fmt.Printf("a=%d\nb.array=%v len(b)=%d cap(b)=%d\n", a, b, len(b), cap(b))
+}
+
 // 逃逸分析
 
 type Role struct {
