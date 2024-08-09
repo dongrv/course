@@ -59,3 +59,7 @@ func TestAccessUnderlyingSlice(t *testing.T) {
 func TestParseFuncStack(t *testing.T) {
 	ParseFuncStack()
 }
+
+func TestSwitchCase(t *testing.T) {
+	SwitchCase()
+}

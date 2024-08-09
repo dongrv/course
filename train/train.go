@@ -268,3 +268,17 @@ func DeleteSlice() {
 	a = a[:len(a)-1]
 	fmt.Printf("%v", a)
 }
+
+func SwitchCase() {
+	a := 1
+	switch a {
+	case 1:
+		println(1)
+		fallthrough // 穿透，直接执行下一个case的代码
+	case 2:
+		println(2)
+		fallthrough
+	default:
+		println(3)
+	}
+}
