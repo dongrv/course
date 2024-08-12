@@ -56,10 +56,18 @@ func TestAccessUnderlyingSlice(t *testing.T) {
 	AccessUnderlyingSlice()
 }
 
+func TestAccessPointer(t *testing.T) {
+	AccessPointer()
+}
+
 func TestParseFuncStack(t *testing.T) {
 	ParseFuncStack()
 }
 
 func TestSwitchCase(t *testing.T) {
 	SwitchCase()
+}
+
+func TestDecodeBase64(t *testing.T) {
+	DecodeBase64()
 }
