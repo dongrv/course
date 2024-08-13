@@ -34,8 +34,9 @@ func Binary() {
 	var i uint32 = 380
 	fmt.Printf("原值：%x\n", 380)
 	iptr := (*[4]byte)(unsafe.Pointer(&i))
+	fmt.Printf("array:%+v\n", *iptr)
 	for _, ptr := range iptr {
-		fmt.Printf("%02X\n", ptr)
+		fmt.Printf("%02X\n", ptr) // 系统默认用小端表示，不同系统可能不同
 	}
 	fmt.Println(strings.Repeat("=", 10))
 	b := make([]byte, 4)
