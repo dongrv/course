@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -31,22 +32,22 @@ const (
 
 func Binary() {
 	var i uint32 = 380
+	fmt.Printf("原值：%x\n", 380)
 	iptr := (*[4]byte)(unsafe.Pointer(&i))
 	for _, ptr := range iptr {
-		fmt.Printf("%02X", ptr)
+		fmt.Printf("%02X\n", ptr)
 	}
-	fmt.Println()
-
+	fmt.Println(strings.Repeat("=", 10))
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, i)
 	for _, bin := range b {
-		fmt.Printf("%02X", bin)
+		fmt.Printf("%02X\n", bin)
 	}
-	fmt.Println()
+	fmt.Println(strings.Repeat("=", 10))
 
 	binary.BigEndian.PutUint32(b, i)
 	for _, bin := range b {
-		fmt.Printf("%02X", bin)
+		fmt.Printf("%02X\n", bin)
 	}
 	fmt.Println()
 }

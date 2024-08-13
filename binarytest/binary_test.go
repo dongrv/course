@@ -2,8 +2,12 @@ package binarytest
 
 import "testing"
 
-func TestBinary(t *testing.T) {
+func TestTCPServer(t *testing.T) {
 	//Binary()
 	go TCPServer()
 	Client()
+}
+
+func TestBinary(t *testing.T) {
+	Binary()
 }
