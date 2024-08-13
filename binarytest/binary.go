@@ -4,6 +4,7 @@ import (
 	"aaagame/tests/course/binarytest/protocol"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -72,7 +73,8 @@ func TCPServer() {
 	for {
 		ln, netErr := l.Accept()
 		if netErr != nil {
-			if err, ok := netErr.(net.Error); ok && err.Timeout() {
+			var err net.Error
+			if errors.As(netErr, &err) && err.Timeout() {
 				// TODO log
 				continue
 			}
