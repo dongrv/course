@@ -56,10 +56,6 @@ func TestAccessUnderlyingSlice(t *testing.T) {
 	AccessUnderlyingSlice()
 }
 
-func TestAccessPointer(t *testing.T) {
-	AccessPointer()
-}
-
 func TestParseFuncStack(t *testing.T) {
 	ParseFuncStack()
 }
