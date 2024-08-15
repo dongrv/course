@@ -44,7 +44,7 @@ func SpinRun() {
 
 	go func() {
 		spinLock.Lock()
-		time.Sleep(time.Second) // 模拟长时间持有锁
+		time.Sleep(10 * time.Second) // 模拟长时间持有锁
 		spinLock.Unlock()
 	}()
 
