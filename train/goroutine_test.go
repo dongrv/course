@@ -9,3 +9,7 @@ func TestRunGoroutine(t *testing.T) {
 func TestSpinRun(t *testing.T) {
 	SpinRun()
 }
+
+func TestDebugThreads(t *testing.T) {
+	DebugThreads()
+}

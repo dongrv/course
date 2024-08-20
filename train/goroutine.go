@@ -2,10 +2,13 @@ package train
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// https://segmentfault.com/a/1190000020254937
 
 func RunGoroutine() {
 	var wg sync.WaitGroup
@@ -53,4 +56,18 @@ func SpinRun() {
 	spinLock.Lock()
 	defer spinLock.Unlock()
 	fmt.Println("Critical section entered.")
+}
+
+func DebugThreads() {
+	var wg sync.WaitGroup
+	debug.SetMaxThreads(5) // main
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second)
+			println(i)
+		}()
+	}
+	wg.Wait()
 }
