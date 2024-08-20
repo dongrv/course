@@ -13,3 +13,7 @@ func TestSpinRun(t *testing.T) {
 func TestDebugThreads(t *testing.T) {
 	DebugThreads()
 }
+
+func TestFmt(t *testing.T) {
+	Fmt()
+}
