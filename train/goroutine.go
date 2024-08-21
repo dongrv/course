@@ -64,7 +64,7 @@ func DebugThreads() {
 	println("cpuNum", runtime.NumCPU())
 	//runtime.GOMAXPROCS(1)
 	debug.SetMaxThreads(5) // 程序能够启动的最少线程数
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -76,6 +76,6 @@ func DebugThreads() {
 }
 
 func Fmt() {
-	debug.SetMaxThreads(1) // 程序能够启动的最少线程数
+	debug.SetMaxThreads(5) // 程序能够启动的最少线程数
 	fmt.Println(1)
 }
