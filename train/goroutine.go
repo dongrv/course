@@ -62,14 +62,15 @@ func SpinRun() {
 func DebugThreads() {
 	var wg sync.WaitGroup
 	println("cpuNum", runtime.NumCPU())
+	//runtime.GOMAXPROCS(1)
 	debug.SetMaxThreads(5) // 程序能够启动的最少线程数
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 20; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
-			time.Sleep(time.Second)
+			time.Sleep(3 * time.Second)
 			println(i)
-		}()
+		}(i)
 	}
 	wg.Wait()
 }
