@@ -1,0 +1,30 @@
+func main() {
+  0x469620              493b6610                CMPQ SP, 0x10(R14)
+  0x469624              762a                    JBE 0x469650
+  0x469626              55                      PUSHQ BP
+  0x469627              4889e5                  MOVQ SP, BP
+  0x46962a              4883ec08                SUBQ $0x8, SP
+        println(1)
+  0x46962e              e86d8dfcff              CALL runtime.printlock(SB)
+  0x469633              b801000000              MOVL $0x1, AX
+  0x469638              e80394fcff              CALL runtime.printint(SB)
+  0x46963d              0f1f00                  NOPL 0(AX)
+  0x469640              e89b8ffcff              CALL runtime.printnl(SB)
+  0x469645              e8b68dfcff              CALL runtime.printunlock(SB)
+}
+  0x46964a              4883c408                ADDQ $0x8, SP
+  0x46964e              5d                      POPQ BP
+  0x46964f              c3                      RET
+func main() {
+  0x469650              e8cb88ffff              CALL runtime.morestack_noctxt.abi0(SB)
+  0x469655              ebc9                    JMP main.main(SB)
+
+  0x469657              cc                      INT $0x3
+  0x469658              cc                      INT $0x3
+  0x469659              cc                      INT $0x3
+  0x46965a              cc                      INT $0x3
+  0x46965b              cc                      INT $0x3
+  0x46965c              cc                      INT $0x3
+  0x46965d              cc                      INT $0x3
+  0x46965e              cc                      INT $0x3
+  0x46965f              cc                      INT $0x3
