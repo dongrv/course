@@ -16,7 +16,7 @@ func TestPlus(t *testing.T) {
 		expected int
 	}{
 		{1, 2, 3},
-		{4, 5, 11},
+		{4, 5, 9},
 		{100, 200, 300},
 	} // 表驱动测试
 	for _, s := range list {
