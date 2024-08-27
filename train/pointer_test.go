@@ -67,3 +67,7 @@ func TestSwitchCase(t *testing.T) {
 func TestDecodeBase64(t *testing.T) {
 	DecodeBase64()
 }
+
+func TestDeleteSlice2(t *testing.T) {
+	DeleteSlice2()
+}

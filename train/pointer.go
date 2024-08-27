@@ -292,3 +292,11 @@ func DecodeBase64() {
 	}
 	fmt.Printf("%s\n", str)
 }
+
+func DeleteSlice2() {
+	a := []interface{}{"a", "b", "c", "d", 5, 6, 7, 8, 9}
+	copy(a[3:], a[4:])
+	println("last meta: ", a[len(a)-1].(int))
+	a[len(a)-1] = nil
+	a = a[:len(a)-1]
+}
