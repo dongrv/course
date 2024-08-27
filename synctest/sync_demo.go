@@ -287,3 +287,37 @@ func CondBlockMutex() {
 	fmt.Println("Data is ready now.")
 	cond.L.Unlock()
 }
+
+var resource bool // 保护变量
+
+func sender(name string, cond *sync.Cond) {
+	time.Sleep(1 * time.Second)
+	cond.L.Lock()
+	println(name, " sender start")
+	resource = true
+	cond.L.Unlock()
+	cond.Broadcast()
+}
+
+func receiver(name string, cond *sync.Cond) {
+	cond.L.Lock()
+	for !resource {
+		cond.Wait()
+	}
+	println(name, " receiver start")
+	// todo sth
+	cond.L.Unlock()
+}
+
+func ImplCondCall() {
+	cond := sync.NewCond(&sync.Mutex{})
+
+	go sender("producer", cond)
+
+	go receiver("consumer1", cond)
+	go receiver("consumer2", cond)
+	go receiver("consumer3", cond)
+
+	time.Sleep(3 * time.Second)
+
+}

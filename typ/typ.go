@@ -1,6 +1,8 @@
 package typ
 
-import "math"
+import (
+	"math"
+)
 
 func Assign() {
 	a, b, c, d := 0b111, 0o123, 0x64, 1_000_000_000
@@ -18,4 +20,5 @@ func MathLog10() {
 		math.Log10(float64(b)),
 		math.Log10(float64(c)),
 	)
+
 }

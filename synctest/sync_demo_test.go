@@ -37,3 +37,7 @@ func TestSyncCond(t *testing.T) {
 func TestWrongCondExample(t *testing.T) {
 	CondBlockMutex()
 }
+
+func TestImplCondCall(t *testing.T) {
+	ImplCondCall()
+}
