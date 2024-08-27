@@ -264,11 +264,11 @@ func CondBlockMutex() {
 	dataReady := false
 
 	go func() {
+		time.Sleep(10 * time.Second)
 		cond.L.Lock() // 优先拿到锁
 		defer cond.L.Unlock()
 
 		// 模拟一段时间后数据准备完成
-		time.Sleep(10 * time.Second)
 		dataReady = true
 
 		// 数据准备完成后发出信号
