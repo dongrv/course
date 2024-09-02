@@ -3,6 +3,7 @@ package unittest
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"text/template"
@@ -94,3 +95,9 @@ func BenchmarkParallel(b *testing.B) {
 }
 
 //  go test -run TestMul
+
+func TestTestError(t *testing.T) {
+	t.Run("TestErrorIs", func(t *testing.T) {
+		assert.Equal(t, true, TestError())
+	})
+}
