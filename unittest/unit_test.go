@@ -92,3 +92,5 @@ func BenchmarkParallel(b *testing.B) {
 		}
 	})
 }
+
+//  go test -run TestMul
