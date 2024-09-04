@@ -1,0 +1,17 @@
+syntax="proto3";
+
+package protocol;
+option go_package = "../protocol";
+
+message HelleResp {
+  int32  UID      = 1;
+  string name     = 2;
+  Profile profile = 3;
+}
+
+message Profile {
+  int32 regionCode = 1;
+  string address   = 2;
+}
+
+// protoc --go_out=./   ./*.proto

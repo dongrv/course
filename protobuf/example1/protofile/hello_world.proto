@@ -1,0 +1,24 @@
+syntax="proto3";
+
+package protocol;
+option go_package = "../protocol";
+
+//import "enum.proto";
+
+message Send {
+  uint32 fuint32        = 1;
+  repeated int32 values = 2;
+}
+
+message Reply {
+  sint32 err     = 1;
+  string text = 2;
+}
+
+message HelleResp {
+  int32  UID  = 1;
+  string name = 2;
+  uint64 exp  = 3;
+}
+
+// protoc --go_out=./   ./*.proto
