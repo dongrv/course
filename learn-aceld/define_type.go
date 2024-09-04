@@ -1,5 +1,7 @@
 package learn_aceld
 
+// https://github.com/aceld/golang/blob/main/1%E3%80%81%E6%95%B0%E6%8D%AE%E5%AE%9A%E4%B9%89.md
+
 // CompareStruct 比较结构体
 func CompareStruct() {
 	s1 := struct {
