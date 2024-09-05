@@ -21,3 +21,9 @@ func TestDistance(t *testing.T) {
 func TestTrimLen(t *testing.T) {
 	TrimLen()
 }
+
+func TestDeferRun(t *testing.T) {
+	t.Run("defer-run-time", func(t *testing.T) {
+		DeferRun()
+	})
+}

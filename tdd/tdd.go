@@ -3,6 +3,8 @@ package tdd
 import (
 	"math"
 	"strconv"
+	"sync"
+	"time"
 )
 
 // 测试驱动开发（Test-Driven Development） - TDD
@@ -35,4 +37,32 @@ func TrimLen() {
 	println("len", len(list), "cap", cap(list))
 	list = list[:len(list)]
 	println("len", len(list), "cap", cap(list))
+}
+
+type Bar struct {
+	mu sync.RWMutex
+}
+
+const (
+	RWMutex = 1 //读
+	Mutex   = 2 //写
+)
+
+// AutoLuck 自动解锁
+func (b *Bar) AutoLuck(i int32) func() {
+	if i == Mutex {
+		b.mu.Lock()
+		println("a-0")
+		return b.mu.Unlock
+	}
+	b.mu.RLock()
+	println("a-1")
+	return b.mu.RUnlock
+}
+
+func DeferRun() {
+	b := &Bar{}
+	defer b.AutoLuck(RWMutex)() // 保留最后一个函数的执行环境，在程序退出前执行
+	time.Sleep(time.Second * 3)
+	println("a-3")
 }
