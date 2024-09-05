@@ -73,3 +73,13 @@ func CompareStruct() {
 	// - 匿名结构体和具名结构体不可比较；
 	// - 结构体的成员字段类型包含不可比较的类型，比如：slice、map，不可比较，但可以使用reflect.DeepEqual比较；
 }
+
+const cl = 100
+
+var bl = 100
+
+func PrintNumber() {
+	// println(&cl, cl) // Cannot take the address of 'cl' 所有常量是不可寻址的
+	// 常量不同于变量的在运行期分配内存，常量通常会被编译器在预处理阶段直接展开，作为指令数据使用
+	println(&bl, cl)
+}
