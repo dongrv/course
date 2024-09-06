@@ -6,8 +6,11 @@ option go_package = "../protocol";
 //import "enum.proto";
 
 message Send {
-  uint32 fuint32        = 1;
-  repeated int32 values = 2;
+  uint32 fuint32         = 1;
+  uint32 fuint322        = 2;
+  uint32 fuint323        = 3;
+  repeated int32 values  = 4;
+  repeated int32 values2 = 5;
 }
 
 message Reply {

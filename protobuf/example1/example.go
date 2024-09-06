@@ -11,8 +11,14 @@ import (
 
 // InnerProto 内部二进制排列
 func InnerProto() {
-	v := uint32(1029)
-	send := protocol.Send{Fuint32: v, Values: []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}
+	v := uint32(1)
+	send := protocol.Send{
+		Fuint32:  v,
+		Fuint322: v + 1,
+		Fuint323: v + 2,
+		Values:   []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		Values2:  []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+	}
 	d, _ := proto.Marshal(&send)
 
 	fmt.Printf("%b\n", d)
