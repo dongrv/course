@@ -1,0 +1,43 @@
+//package service
+//
+//import (
+//	"fmt"
+//	"github.com/stretchr/testify/assert"
+//	"testing"
+//)
+//
+//// 在 service_test.go 文件中
+//func TestSubtract(t *testing.T) {
+//	testCases := []struct {
+//		x, y, expected int
+//	}{
+//		{5, 2, 3},
+//		{-1, -1, 0},
+//		{0, 0, 0},
+//		{2000, 1000, 1000},
+//	}
+//
+//	for _, tc := range testCases {
+//		t.Run(fmt.Sprintf("%d-%d", tc.x, tc.y), func(t *testing.T) {
+//			assert.Equal(t, tc.expected, Subtract(tc.x, tc.y))
+//		})
+//	}
+//}
+//
+//// 在 service_test.go 文件中
+//func TestAdd(t *testing.T) {
+//	testCases := []struct {
+//		x, y, expected int
+//	}{
+//		{2, 3, 5},
+//		{-1, -1, -2},
+//		{0, 0, 0},
+//		{1000, 2000, 3000},
+//	}
+//
+//	for _, tc := range testCases {
+//		t.Run(fmt.Sprintf("%d+%d", tc.x, tc.y), func(t *testing.T) {
+//			assert.Equal(t, tc.expected, Add(tc.x, tc.y))
+//		})
+//	}
+//}

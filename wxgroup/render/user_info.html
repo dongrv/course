@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ .Name }}'s Blog</title>
+</head>
+<body>
+<h1>Welcome {{ .Name }}</h1>
+<p>Age: {{ .Age }}</p>
+<ul>
+    {{ range .Posts }}
+    <li><a href="/post/{{ .ID }}">{{ .Title }}</a></li>
+    {{ end }}
+</ul>
+</body>
+</html>
