@@ -85,3 +85,13 @@ func main() {
 
 // 跟踪打印垃圾回收器信息
 // GODEBUG='gctrace=1' ./snippet_mem
+
+// gc # @#s #%: #+#+# ms clock, #+#/#/#+# ms cpu, #->#-># MB, # MB goal, # P
+// 解读：
+// gc #        GC次数的编号，每次GC时递增
+// @#s         距离程序开始执行时的时间
+// #%          GC占用的执行时间百分比
+// #+...+#     GC使用的时间
+// #->#-># MB  GC开始，结束，以及当前活跃堆内存的大小，单位M
+// # MB goal   全局堆内存大小
+// # P         使用processor的数量
