@@ -41,27 +41,29 @@ func Emit(cond *sync.Cond) {
 }
 
 func main() {
-	f := func() {
-		var wg = &sync.WaitGroup{}
-		cond := sync.NewCond(&sync.Mutex{})
-		for i := 0; i < 512; i++ {
-			wg.Add(1)
-			go func() {
-				if err := Watch(wg, cond); err != nil {
-					println(err.Error())
-					atomic.AddInt64(&fail, 1)
-				} else {
-					atomic.AddInt64(&success, 1)
-				}
-			}()
-		}
-		time.Sleep(time.Second)
-		Emit(cond) // 触发
-		wg.Wait()
-		conns = nil
-		println("success: ", success, "\tfail: ", fail)
-	}
 	for i := 0; i < 10; i++ {
-		f()
+		{
+			{
+				var wg = &sync.WaitGroup{}
+
+				cond := sync.NewCond(&sync.Mutex{})
+				for i := 0; i < 512; i++ {
+					wg.Add(1)
+					go func() {
+						if err := Watch(wg, cond); err != nil {
+							println(err.Error())
+							atomic.AddInt64(&fail, 1)
+						} else {
+							atomic.AddInt64(&success, 1)
+						}
+					}()
+				}
+				time.Sleep(time.Second)
+				Emit(cond) // 触发
+				wg.Wait()
+				conns = nil
+				println("success: ", success, "\tfail: ", fail)
+			}
+		}
 	}
 }
